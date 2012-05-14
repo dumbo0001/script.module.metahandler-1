@@ -1143,10 +1143,10 @@ class MetaData:
                 meta['mpaa'] = show.content_rating
                 meta['premiered'] = str(show.first_aired)
 
-                #Do whatever we can to set a year, if we don't have one lets try to strip it from premiered
-                if not year and meta['premiered']:
-                    #meta['year'] = int(self._convert_date(meta['premiered'], '%Y-%m-%d', '%Y'))
-                    meta['year'] = int(meta['premiered'][:4])
+                #Do whatever we can to set a year, if we don't have one lets try to strip it from show.first_aired/premiered
+                if not year and show.first_aired:
+                        #meta['year'] = int(self._convert_date(meta['premiered'], '%Y-%m-%d', '%Y'))
+                        meta['year'] = int(meta['premiered'][:4])
 
                 if show.genre != '':
                     temp = show.genre.replace("|",",")
