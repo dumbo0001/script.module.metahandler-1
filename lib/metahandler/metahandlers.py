@@ -856,7 +856,7 @@ class MetaData:
             sql_select = "SELECT * FROM %s WHERE imdb_id = '%s'" % (table, meta['imdb_id'])
         else:           
             sql_select = "SELECT * FROM %s WHERE title = '%s'" % (table, meta['title'])
-            if meta.has_key('year'):
+            if meta.has_key('year') and type == self.type_movie:
                 if meta['year']:
                     sql_select = sql_select + " AND year = '%s'" % meta['year']
 
