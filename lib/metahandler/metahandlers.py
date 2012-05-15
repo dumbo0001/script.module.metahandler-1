@@ -281,7 +281,7 @@ class MetaData:
         meta['cover_url'] = ''
         meta['backdrop_url'] = ''
         meta['overlay'] = 6
-        meta['episode'] = '0'
+        meta['episode'] = 0
         meta['playcount'] = 0
         return meta
 
@@ -1172,7 +1172,7 @@ class MetaData:
                         if imdb_meta.has_key('overview'):
                             meta['plot'] = imdb_meta['overview']
                         if imdb_meta.has_key('rating'):
-                            meta['rating'] = imdb_meta['rating']
+                            meta['rating'] = float(imdb_meta['rating'])
                         if imdb_meta.has_key('runtime'):
                             meta['duration'] = imdb_meta['runtime']
                         if imdb_meta.has_key('cast'):
