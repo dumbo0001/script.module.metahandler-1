@@ -188,12 +188,10 @@ class MetaData:
 			sql_create = sql_create.replace("imdb_id TEXT","imdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("tvdb_id TEXT","tvdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("title TEXT"  ,"title VARCHAR(255)")
-			print sql_create
 			self.dbcur.execute(sql_create)
 			try: self.dbcur.execute('CREATE INDEX nameindex on movie_meta (title);')
 			except: pass
 		else:
-			print sql_create
 			self.dbcur.execute(sql_create)
 			self.dbcur.execute('CREATE INDEX IF NOT EXISTS nameindex on movie_meta (title);')
 		print 'Table movie_meta initialized'
@@ -225,7 +223,6 @@ class MetaData:
 			sql_create = sql_create.replace("imdb_id TEXT","imdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("tvdb_id TEXT","tvdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("title TEXT"  ,"title VARCHAR(255)")
-			print sql_create
 			self.dbcur.execute(sql_create)
 			try: self.dbcur.execute('CREATE INDEX nameindex on tvshow_meta (title);')
 			except: pass
@@ -247,7 +244,6 @@ class MetaData:
 		if DB == 'mysql':
 			sql_create = sql_create.replace("imdb_id TEXT","imdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("tvdb_id TEXT","tvdb_id VARCHAR(10)")
-			print sql_create
 			self.dbcur.execute(sql_create)
 		else:
 			self.dbcur.execute(sql_create)
@@ -275,7 +271,6 @@ class MetaData:
 			sql_create = sql_create.replace("tvdb_id TEXT"   ,"tvdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("episode_id TEXT","episode_id VARCHAR(10)")
 			sql_create = sql_create.replace("title TEXT"     ,"title VARCHAR(255)")
-			print sql_create
 			self.dbcur.execute(sql_create)
 		else:
 			self.dbcur.execute(sql_create)
@@ -296,7 +291,6 @@ class MetaData:
 
 		if DB == 'mysql':
 			sql_create = sql_create.replace("addon_id TEXT", "addon_id VARCHAR(255)")
-			print sql_create
 			self.dbcur.execute(sql_create)
 		else:
 			self.dbcur.execute(sql_create)
@@ -882,8 +876,9 @@ class MetaData:
 				sql_select = sql_select.replace("ISNULL", "IS NULL")
 		print 'Looking up in local cache by name for: %s %s %s' % (type, name, year)
 		
-		if year and type == self.type_movie:
-			sql_select = sql_select + " AND year = %s" % year
+		# movie_meta doesn't have a year column
+		# if year and type == self.type_movie:
+			# sql_select = sql_select + " AND year = %s" % year
 		print 'SQL Select: %s' % sql_select            
 		
 		try:
@@ -924,9 +919,10 @@ class MetaData:
 			sql_select = "SELECT * FROM %s WHERE imdb_id = '%s'" % (table, meta['imdb_id'])
 		else:           
 			sql_select = "SELECT * FROM %s WHERE title = '%s'" % (table, meta['title'])
-			if meta.has_key('year') and type == self.type_movie:
-				if meta['year']:
-					sql_select = sql_select + " AND year = '%s'" % meta['year']
+			#movie_meta does not have a year column
+			# if meta.has_key('year') and type == self.type_movie:
+				# if meta['year']:
+					# sql_select = sql_select + " AND year = '%s'" % meta['year']
 
 		print 'Checking if entry already exists in cache table: %s' % table
 		print 'SQL SELECT: %s' % sql_select            
