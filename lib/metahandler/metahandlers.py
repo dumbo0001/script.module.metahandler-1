@@ -164,29 +164,32 @@ class MetaData:
 
 		# Create Movie table
 		sql_create = "CREATE TABLE IF NOT EXISTS movie_meta ("\
-						   "imdb_id TEXT, "\
-						   "tvdb_id TEXT, "\
-						   "title TEXT, "\
-						   "cast TEXT, "\
-						   "rating FLOAT, "\
-						   "duration TEXT, "\
-						   "plot TEXT,"\
-						   "mpaa TEXT, "\
-						   "premiered TEXT, "\
-						   "genre TEXT, "\
-						   "studio TEXT, "\
-						   "status TEXT, "\
-						   "banner_url TEXT, "\
-						   "cover_url TEXT, "\
-						   "trailer_url TEXT, "\
-						   "backdrop_url TEXT, "\
-						   "imgs_prepacked TEXT, "\
-						   "overlay INTEGER, "\
-						   "UNIQUE(imdb_id, tvdb_id, title) "\
-						   ");"
+                           "imdb_id TEXT, "\
+                           "tmdb_id TEXT, "\
+                           "title TEXT, "\
+                           "year INTEGER,"\
+                           "director TEXT, "\
+                           "writer TEXT, "\
+                           "tagline TEXT, cast TEXT,"\
+                           "rating FLOAT, "\
+                           "votes TEXT, "\
+                           "duration TEXT, "\
+                           "plot TEXT,"\
+                           "mpaa TEXT, "\
+                           "premiered TEXT, "\
+                           "genre TEXT, "\
+                           "studio TEXT,"\
+                           "thumb_url TEXT, "\
+                           "cover_url TEXT, "\
+                           "trailer_url TEXT, "\
+                           "backdrop_url TEXT,"\
+                           "imgs_prepacked TEXT,"\
+                           "overlay INTEGER,"\
+                           "UNIQUE(imdb_id, tmdb_id, title, year)"\
+                           ");"
 		if DB == 'mysql':
 			sql_create = sql_create.replace("imdb_id TEXT","imdb_id VARCHAR(10)")
-			sql_create = sql_create.replace("tvdb_id TEXT","tvdb_id VARCHAR(10)")
+			sql_create = sql_create.replace("tmdb_id TEXT","tmdb_id VARCHAR(10)")
 			sql_create = sql_create.replace("title TEXT"  ,"title VARCHAR(255)")
 			self.dbcur.execute(sql_create)
 			try: self.dbcur.execute('CREATE INDEX nameindex on movie_meta (title);')
@@ -1725,18 +1728,18 @@ class MetaData:
 			pass        
 		
 		print 'Saving episode cache information: ', meta
-		# try:
-		self.dbcur.execute("INSERT INTO episode_meta VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-						   (meta['imdb_id'], meta['tvdb_id'], meta['episode_id'], meta['season'], 
-							meta['episode'], meta['title'], meta['director'], meta['writer'], 
-							meta['plot'], meta['rating'], meta['premiered'], meta['poster'], 
-							meta['overlay'])
-		)
-		self.dbcon.commit()
-		# except Exception, e:
-			# print '************* Error attempting to insert into cache table: %s ' % e
-			# print 'Meta data:', meta
-			# pass        
+		try:
+			self.dbcur.execute("INSERT INTO episode_meta VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+							   (meta['imdb_id'], meta['tvdb_id'], meta['episode_id'], meta['season'], 
+								meta['episode'], meta['title'], meta['director'], meta['writer'], 
+								meta['plot'], meta['rating'], meta['premiered'], meta['poster'], 
+								meta['overlay'])
+			)
+			self.dbcon.commit()
+		except Exception, e:
+			print '************* Error attempting to insert into cache table: %s ' % e
+			print 'Meta data:', meta
+			pass        
 
 
 	def update_trailer(self, type, imdb_id, trailer, tmdb_id=''):
