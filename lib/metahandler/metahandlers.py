@@ -2141,7 +2141,7 @@ class MetaData:
 		print 'Saving season cache information: ', meta
 		try:
 			self.dbcur.execute("INSERT INTO season_meta VALUES "
-							   "(imdb_id, tvdb_id, season, cover_url, overlay)",
+							   "(%s, %s, %s, %s, %s)",
 							   (meta['imdb_id'],meta['tvdb_id'],meta['season'],meta['cover_url'],meta['overlay'])
 							   )
 			self.dbcon.commit()
