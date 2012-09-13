@@ -76,13 +76,6 @@ def bool2string(myinput):
     if myinput is False: return 'false'
     elif myinput is True: return 'true'
 
-class MySQLCursorDict(database.cursor.MySQLCursor):
-	def _row_to_python(self, rowdata, desc=None):
-		row = super(MySQLCursorDict, self)._row_to_python(rowdata, desc)
-		if row:
-			return dict(zip(self.column_names, row))
-		return None
-
 class MetaData:  
 	'''
 	This class performs all the handling of meta data, requesting, storing and sending back to calling application
@@ -135,6 +128,12 @@ class MetaData:
 
 		# connect to db at class init and use it globally
 		if DB == 'mysql':
+			class MySQLCursorDict(database.cursor.MySQLCursor):
+				def _row_to_python(self, rowdata, desc=None):
+					row = super(MySQLCursorDict, self)._row_to_python(rowdata, desc)
+					if row:
+						return dict(zip(self.column_names, row))
+					return None
 			db_address = addon.getSetting('db_address')
 			db_port = addon.getSetting('db_port')
 			if db_port: db_address = '%s:%s' %(db_address,db_port)
