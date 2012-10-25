@@ -12,15 +12,17 @@ import os,sys
 import shutil
 
 #necessary so that the metacontainers.py can use the scrapers
-try: import xbmc, xbmcaddon
+try: import xbmc
 except:
      xbmc_imported = False
 else:
      xbmc_imported = True
 
+from t0mm0.common.addon import Addon
+
 #append lib directory
-addon = xbmcaddon.Addon(id='script.module.metahandler')
-addon_path = addon.getAddonInfo('path')
+addon = Addon('script.module.metahandler')
+addon_path = addon.get_path()
 sys.path.append((os.path.split(addon_path))[0])
 
 '''
@@ -29,23 +31,23 @@ sys.path.append((os.path.split(addon_path))[0])
        Keep pysqlite2 for legacy support
 '''
 try:
-	if  addon.getSetting('use_remote_db')=='true' and \
-	    addon.getSetting('db_address') is not None and \
-	    addon.getSetting('db_user') is not None and \
-	    addon.getSetting('db_pass') is not None and \
-	    addon.getSetting('db_name') is not None:
+	if  addon.get_setting('use_remote_db')=='true' and \
+	    addon.get_setting('db_address') is not None and \
+	    addon.get_setting('db_user') is not None and \
+	    addon.get_setting('db_pass') is not None and \
+	    addon.get_setting('db_name') is not None:
 		import mysql.connector as database
-		print 'Metacontainers - Loading MySQLdb as DB engine'
+		addon.log('Metacontainers - Loading MySQLdb as DB engine', 2)
 		DB = 'mysql'
 	else:
 		raise ValueError('MySQL not enabled or not setup correctly')
 except:
 	try: 
 		from sqlite3 import dbapi2 as database
-		print 'Metacontainers - Loading sqlite3 as DB engine'
+		addon.log('Metacontainers - Loading sqlite3 as DB engine', 2)
 	except: 
 		from pysqlite2 import dbapi2 as database
-		print 'Metacontainers - pysqlite2 as DB engine'
+		addon.log('Metacontainers - pysqlite2 as DB engine', 2)
 	DB = 'sqlite'
 
 class MetaContainer:
@@ -70,15 +72,15 @@ class MetaContainer:
 		
 		self.table_list = ['movie_meta', 'tvshow_meta', 'season_meta', 'episode_meta']
 	 
-		print '---------------------------------------------------------------------------------------'
+		addon.log('---------------------------------------------------------------------------------------', 2)
 		#delete and re-create work_path to ensure no previous files are left over
 		if os.path.exists(self.work_path):
 			import shutil
 			try:
-				print 'Removing previous work folder: %s' % self.work_path
+				addon.log('Removing previous work folder: %s' % self.work_path, 2)
 				shutil.rmtree(self.work_path)
 			except Exception, e:
-				print 'Failed to delete work folder: %s' % e
+				addon.log('Failed to delete work folder: %s' % e, 4)
 				pass
 		
 		#Re-Create work folder
@@ -112,10 +114,10 @@ class MetaContainer:
 				try:
 					shutil.rmtree(catch_path)
 				except:
-					print 'Failed to delete old meta'
+					addon.log('Failed to delete old meta', 4)
 					return False
 				else:
-					print 'deleted old meta'
+					addon.log('deleted old meta', 0)
 					return True
 
 
@@ -125,16 +127,16 @@ class MetaContainer:
 				try:
 					shutil.rmtree(path)
 				except:
-					print 'Failed to delete old meta'
+					addon.log('Failed to delete old meta', 4)
 					return False
 				else:
-					print 'deleted old meta'
+					addon.log('deleted old meta', 0)
 					return True
 
 
 	def _extract_zip(self, src, dest):
 			try:
-				print 'Extracting '+str(src)+' to '+str(dest)
+				addon.log('Extracting '+str(src)+' to '+str(dest), 0)
 				#make sure there are no double slashes in paths
 				src=os.path.normpath(src)
 				dest=os.path.normpath(dest) 
@@ -143,14 +145,14 @@ class MetaContainer:
 				if os.path.getsize(src) > 10000:
 					xbmc.executebuiltin("XBMC.Extract("+src+","+dest+")")
 				else:
-					print '************* Error: File size is too small'
+					addon.log('************* Error: File size is too small', 4)
 					return False
 
 			except:
-				print 'Extraction failed!'
+				addon.log('Extraction failed!', 4)
 				return False
 			else:                
-				print 'Extraction success!'
+				addon.log('Extraction success!', 0)
 				return True
 
 
@@ -165,7 +167,7 @@ class MetaContainer:
 			table (str): table name to select from/insert into
 		'''
 
-		print 'Inserting records into table: %s' % table
+		addon.log('Inserting records into table: %s' % table, 0)
 		try:
 			if DB == 'mysql':
 				try: 	from sqlite3   import dbapi2 as sqlite
@@ -190,13 +192,13 @@ class MetaContainer:
 
 			else:
 				sql_insert = 'INSERT OR IGNORE INTO %s SELECT * FROM work_db.%s' % (table, table)        
-				print 'SQL Insert: %s' % sql_insert
-				print self.work_videocache
+				addon.log('SQL Insert: %s' % sql_insert, 0)
+				addon.log(self.work_videocache, 0)
 				db = database.connect(self.videocache)
 				db.execute('ATTACH DATABASE "%s" as work_db' % self.work_videocache)
 				db.execute(sql_insert)
 		except Exception, e:
-			print '************* Error attempting to insert into table: %s with error: %s' % (table, e)
+			addon.log('************* Error attempting to insert into table: %s with error: %s' % (table, e), 4)
 			pass
 			return False
 		db.commit()
@@ -206,7 +208,7 @@ class MetaContainer:
 		 
 	def install_metadata_container(self, containerpath, installtype):
 
-		print 'Attempting to install type: %s  path: %s' % (installtype, containerpath)
+		addon.log('Attempting to install type: %s  path: %s' % (installtype, containerpath), 0)
 
 		if installtype=='database':
 			extract = self._extract_zip(containerpath, self.work_path)
@@ -225,5 +227,5 @@ class MetaContainer:
 			return self._extract_zip(containerpath, self.tv_images)
 
 		else:
-			print '********* Not a valid installtype: %s' % installtype
+			addon.log('********* Not a valid installtype: %s' % installtype, 3)
 			return False
