@@ -78,6 +78,7 @@ def bool2string(myinput):
     if myinput is False: return 'false'
     elif myinput is True: return 'true'
 
+        
 class MetaData:  
     '''
     This class performs all the handling of meta data, requesting, storing and sending back to calling application
@@ -549,7 +550,23 @@ class MetaData:
             if meta[item] is None:
                 meta[item] = ''            
         return meta
-                              
+
+
+    def __insert_from_dict(self, table, dict):
+        ''' Create a SQL Insert statement with dictionary values '''
+        sql = 'INSERT INTO ' + table
+        sql += ' ('
+        sql += ', '.join(dict)
+        sql += ') '
+        
+        if DB == 'mysql':
+            format = ', '.join(['%s'] * len(dict))
+        else:
+            format = ', '.join('?' * len(dict))
+        
+        sql_insert = sql + 'Values (%s)' % format
+        return sql_insert
+
 
     def check_meta_installed(self, addon_id):
         '''
@@ -943,7 +960,7 @@ class MetaData:
             addon.log('No match in local DB', 0)
             return None
 
-
+    
     def _cache_save_video_meta(self, meta, name, type, overlay=6):
         '''
         Saves meta data to SQL table given type
@@ -967,10 +984,10 @@ class MetaData:
             sql_select = "SELECT * FROM %s WHERE imdb_id = '%s'" % (table, meta['imdb_id'])
         else:           
             sql_select = "SELECT * FROM %s WHERE title = '%s'" % (table, meta['title'])
-            #movie_meta does not have a year column
-            # if meta.has_key('year') and type == self.type_movie:
-                # if meta['year']:
-                    # sql_select = sql_select + " AND year = '%s'" % meta['year']
+
+            if meta.has_key('year') and type == self.type_movie:
+                if meta['year']:
+                    sql_select = sql_select + " AND year = '%s'" % meta['year']
 
         addon.log('Checking if entry already exists in cache table: %s' % table, 0)
         addon.log('SQL SELECT: %s' % sql_select, 0)
@@ -1001,23 +1018,11 @@ class MetaData:
         meta['overlay'] = overlay
         
         addon.log('Saving cache information: %s' % meta, 0)
+        sql_insert = self.__insert_from_dict(table, meta)
+        addon.log('SQL INSERT: %s' % sql_insert, 0)
+
         try:
-            if type == self.type_movie:
-                self.dbcur.execute("INSERT INTO " + table + " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                                   (meta['imdb_id'], meta['tmdb_id'], meta['title'],
-                                    meta['year'], meta['director'], meta['writer'], meta['tagline'], meta['cast'], 
-                                    meta['rating'], meta['votes'], meta['duration'], meta['plot'], meta['mpaa'], 
-                                    meta['premiered'], meta['genre'], meta['studio'], meta['thumb_url'], meta['cover_url'], 
-                                    meta['trailer_url'], meta['backdrop_url'], meta['imgs_prepacked'], meta['overlay'])
-                )
-            elif type == self.type_tvshow:
-                self.dbcur.execute("INSERT INTO " + table + " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                                   (meta['imdb_id'], meta['tvdb_id'], meta['title'], meta['cast'], 
-                                    meta['rating'], meta['duration'], meta['plot'], meta['mpaa'], 
-                                    meta['premiered'], meta['genre'], meta['studio'], meta['status'], 
-                                    meta['banner_url'], meta['cover_url'], meta['trailer_url'], meta['backdrop_url'], 
-                                    meta['imgs_prepacked'], meta['overlay'])
-                )
+            self.dbcur.execute(sql_insert, meta.values())
             self.dbcon.commit()
         except Exception, e:
             addon.log('************* Error attempting to insert into %s cache table: %s ' % (table, e), 4)
@@ -1118,7 +1123,9 @@ class MetaData:
         meta['plot'] = md.get('overview', '')
         meta['mpaa'] = md.get('certification', '')       
         meta['premiered'] = md.get('released', '')
-        
+        meta['director'] = md.get('director', '')
+        meta['writer'] = md.get('writer', '')       
+
         #Do whatever we can to set a year, if we don't have one lets try to strip it from premiered
         if not year and meta['premiered']:
             meta['year'] = int(self._convert_date(meta['premiered'], '%Y-%m-%d', '%Y'))
