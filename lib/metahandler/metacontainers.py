@@ -56,7 +56,7 @@ class MetaContainer:
 		#!!!! This must be matched to the path in meteahandler.py MetaData __init__
 
 		#Check if a path has been set in the addon settings
-		settings_path = addon.getSetting('meta_folder_location')
+		settings_path = addon.get_setting('meta_folder_location')
 		
 		if settings_path:
 			self.path = xbmc.translatePath(settings_path)
