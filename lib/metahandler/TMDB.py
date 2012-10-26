@@ -31,7 +31,20 @@ class TMDB(object):
         self.imdb_name_api = 'http://www.imdbapi.com/?t=%s'
         self.imdb_nameyear_api = 'http://www.imdbapi.com/?t=%s&y=%s' 
 
-            
+
+    def __clean_name(self, mystring):
+        newstring = ''
+        for word in mystring.split(' '):
+            if word.isalnum()==False:
+                w = ""          
+                for i in range(len(word)):
+                    if(word[i].isalnum()):              
+                        w+=word[i]
+                word = w
+            newstring += ' ' + word
+        return newstring.strip()
+
+
     def _do_request(self, method, values):
         '''
         Request JSON data from TMDB
@@ -204,7 +217,22 @@ class TMDB(object):
                 if meta.has_key('tmdb_rating'):
                     meta['rating'] = meta['tmdb_rating']
 
-        if not self._upd_key(imdb_meta, 'Votes'):
+        if self._upd_key(meta, 'certification'):
+            if imdb_meta['Rated']:
+                addon.log('-- IMDB - Updating MPAA', 0)
+                meta['certification'] = imdb_meta['Rated']
+
+        if self._upd_key(meta, 'director'):
+            if imdb_meta['Director']:
+                addon.log('-- IMDB - Updating Director', 0)
+                meta['director'] = imdb_meta['Director']
+
+        if self._upd_key(meta, 'writer'):
+            if imdb_meta['Writer']:
+                addon.log('-- IMDB - Updating Writer', 0)
+                meta['writer'] = imdb_meta['Writer']
+
+        if not self._upd_key(imdb_meta, 'imdbVotes'):
             meta['votes'] = imdb_meta['imdbVotes']
         else:
             meta['votes'] = ''
@@ -220,14 +248,17 @@ class TMDB(object):
             temp=imdb_meta['Runtime']
             if temp != 'N/A':
                 dur=0
-                scrape=re.compile('(.+?) hr').findall(temp)
+                scrape=re.compile('([0-9]+) h ([0-9]+) min').findall(temp)
+                if len(scrape) > 0:
+                    dur = (int(scrape[0][0]) * 60) + int(scrape[0][1])
+                scrape=re.compile('([0-9]+) hr').findall(temp)
                 if len(scrape) > 0:
                     dur = int(scrape[0]) * 60
-                scrape=re.compile(' (.+?) (.+?) min').findall(temp)
+                scrape=re.compile(' ([0-9]+) ([0-9]+) min').findall(temp)
                 if len(scrape) > 0:
                     dur = dur + int(scrape[0][1])
                 else: # No hrs in duration
-                    scrape=re.compile('(.+?) min').findall(temp)
+                    scrape=re.compile('([0-9]+) min').findall(temp)
                     if len(scrape) > 0:
                         dur = dur + int(scrape[0])
                 meta['runtime']=str(dur)
@@ -249,7 +280,7 @@ class TMDB(object):
 
     def _search_movie(self, name, year=''):
         ''' Helper method to start a TMDB Movie.search request - search by Name/Year '''
-        name = urllib.quote(name)
+        name = urllib.quote(self.__clean_name(name))
         if year:
             name = name + '+' + year
         return self._do_request('Movie.search',name)
@@ -321,11 +352,12 @@ class TMDB(object):
                 meta['rating'] = 0
                 
                 #Update any missing information from IDMB
-                if meta['overview'] == 'None' or meta['overview'] == '' or meta['overview'] == 'TBD' or meta['overview'] == 'No overview found.' or meta['rating'] == 0 or meta['runtime'] == 0 or meta['runtime'] == None or str(meta['genres']) == '[]' or str(meta['posters']) == '[]' or meta['released'] == None:
-                    addon.log('Some info missing in TMDB for Movie *** %s ***. Will search imdb for more' % imdb_id, 0)
-                    imdb_meta = self.search_imdb(name, imdb_id)
-                    if imdb_meta:
-                        meta = self.update_imdb_meta(meta, imdb_meta)
+                #if meta['overview'] == 'None' or meta['overview'] == '' or meta['overview'] == 'TBD' or meta['overview'] == 'No overview found.' or meta['rating'] == 0 or meta['runtime'] == 0 or meta['runtime'] == None or str(meta['genres']) == '[]' or str(meta['posters']) == '[]' or meta['released'] == None or meta['certification'] == None:
+                #addon.log('Some info missing in TMDB for Movie *** %s ***. Will search imdb for more' % imdb_id, 0)
+                addon.log('Requesting IMDB for extra information: %s' % imdb_id, 0)
+                imdb_meta = self.search_imdb(name, imdb_id)
+                if imdb_meta:
+                    meta = self.update_imdb_meta(meta, imdb_meta)
         
         #If all else fails, and we don't have a TMDB id
         else:
