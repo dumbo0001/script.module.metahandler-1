@@ -32,7 +32,7 @@ from thetvdbapi import TheTVDB
 #necessary so that the metacontainers.py can use the scrapers
 import xbmc
 
-''' Use t0mm0's common library for http calls, corrects unicode problems '''
+''' Use t0mm0's common library for http calls '''
 from t0mm0.common.addon import Addon
 from t0mm0.common.net import Net
 net = Net()
@@ -150,8 +150,53 @@ class MetaData:
             self.dbcon.row_factory = database.Row # return results indexed by field names and not numbers so we can convert to dict
             self.dbcur = self.dbcon.cursor()
 
+
+        # !!!!!!!! TEMPORARY CODE !!!!!!!!!!!!!!!
+        if os.path.exists(self.videocache):
+            table_exists = True
+            try:
+                sql_select = 'select * from tvshow_meta'
+                self.dbcur.execute(sql_select)
+                matchedrow = self.dbcur.fetchone()
+            except:
+                table_exists = False
+
+            if table_exists:
+                sql_select = 'SELECT year FROM tvshow_meta'
+                sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
+                try:
+                    self.dbcur.execute(sql_select)
+                    matchedrow = self.dbcur.fetchone()
+                except Exception:
+                    print '************* tvshow year column does not exist - creating temp table'
+                    self.dbcur.execute(sql_alter)
+                    self.dbcon.commit()
+    
+        ## !!!!!!!!!!!!!!!!!!!!!!!
+
+
         # initialize cache db
         self._cache_create_movie_db()
+
+        
+        # !!!!!!!! TEMPORARY CODE !!!!!!!!!!!!!!!
+        
+        sql_insert = "INSERT INTO tvshow_meta (imdb_id, tvdb_id, title, year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay) SELECT imdb_id, tvdb_id, title, cast(substr(premiered, 1,4) as integer) as year, [cast], rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay FROM tmp_tvshow_meta"
+        sql_select = 'SELECT imdb_id from tmp_tvshow_meta'
+        sql_drop = 'DROP TABLE tmp_tvshow_meta'
+        try:
+            self.dbcur.execute(sql_select)
+            matchedrow = self.dbcur.fetchone()
+            self.dbcur.execute(sql_insert)
+            self.dbcon.commit()
+            self.dbcur.execute(sql_drop)
+            self.dbcon.commit()
+        except Exception, e:
+            print '************* tmp_tvshow_meta does not exist: %s' % e
+
+        ## !!!!!!!!!!!!!!!!!!!!!!!
+
+
 
     def __del__(self):
         ''' Cleanup db when object destroyed '''
@@ -206,6 +251,7 @@ class MetaData:
                            "imdb_id TEXT, "\
                            "tvdb_id TEXT, "\
                            "title TEXT, "\
+                           "year INTEGER,"\
                            "cast TEXT,"\
                            "rating FLOAT, "\
                            "duration TEXT, "\
@@ -326,7 +372,7 @@ class MetaData:
         meta['imdb_id'] = imdb_id
         meta['tvdb_id'] = tvdb_id
         meta['title'] = name
-        meta['TVShowTitle'] = name        
+        meta['TVShowTitle'] = name
         meta['rating'] = 0
         meta['duration'] = ''
         meta['plot'] = ''
@@ -552,17 +598,14 @@ class MetaData:
         return meta
 
 
-    def __insert_from_dict(self, table, dict):
+    def __insert_from_dict(self, table, size):
         ''' Create a SQL Insert statement with dictionary values '''
-        sql = 'INSERT INTO ' + table
-        sql += ' ('
-        sql += ', '.join(dict)
-        sql += ') '
+        sql = 'INSERT INTO %s ' % table
         
         if DB == 'mysql':
-            format = ', '.join(['%s'] * len(dict))
+            format = ', '.join(['%s'] * size)
         else:
-            format = ', '.join('?' * len(dict))
+            format = ', '.join('?' * size)
         
         sql_insert = sql + 'Values (%s)' % format
         return sql_insert
@@ -700,7 +743,7 @@ class MetaData:
         Returns:
             DICT of meta data or None if cannot be found.
         '''
-        
+       
         addon.log('---------------------------------------------------------------------------------------', 2)
         addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (type, name, year, imdb_id, tmdb_id), 2)
         
@@ -1018,11 +1061,25 @@ class MetaData:
         meta['overlay'] = overlay
         
         addon.log('Saving cache information: %s' % meta, 0)
-        sql_insert = self.__insert_from_dict(table, meta)
-        addon.log('SQL INSERT: %s' % sql_insert, 0)
 
         try:
-            self.dbcur.execute(sql_insert, meta.values())
+            if type == self.type_movie:
+                sql_insert = self.__insert_from_dict(table, 22)
+                addon.log('SQL INSERT: %s' % sql_insert, 0)
+
+                self.dbcur.execute(sql_insert, (meta['imdb_id'], meta['tmdb_id'], meta['title'],
+                                meta['year'], meta['director'], meta['writer'], meta['tagline'], meta['cast'],
+                                meta['rating'], meta['votes'], meta['duration'], meta['plot'], meta['mpaa'],
+                                meta['premiered'], meta['genre'], meta['studio'], meta['thumb_url'], meta['cover_url'],
+                                meta['trailer_url'], meta['backdrop_url'], meta['imgs_prepacked'], meta['overlay']))
+            elif type == self.type_tvshow:
+                sql_insert = self.__insert_from_dict(table, 19)
+                addon.log('SQL INSERT: %s' % sql_insert, 0)
+
+                self.dbcur.execute(sql_insert, (meta['imdb_id'], meta['tvdb_id'], meta['title'], meta['year'], 
+                        meta['cast'], meta['rating'], meta['duration'], meta['plot'], meta['mpaa'],
+                        meta['premiered'], meta['genre'], meta['studio'], meta['status'], meta['banner_url'],
+                        meta['cover_url'], meta['trailer_url'], meta['backdrop_url'], meta['imgs_prepacked'], meta['overlay']))
             self.dbcon.commit()
         except Exception, e:
             addon.log('************* Error attempting to insert into %s cache table: %s ' % (table, e), 4)
@@ -1128,8 +1185,9 @@ class MetaData:
 
         #Do whatever we can to set a year, if we don't have one lets try to strip it from premiered
         if not year and meta['premiered']:
-            meta['year'] = int(self._convert_date(meta['premiered'], '%Y-%m-%d', '%Y'))
-                   
+            #meta['year'] = int(self._convert_date(meta['premiered'], '%Y-%m-%d', '%Y'))
+            meta['year'] = int(meta['premiered'][:4])
+            
         meta['trailer_url'] = md.get('trailer', '')
         meta['genre'] = md.get('genre', '')
         
@@ -1260,7 +1318,6 @@ class MetaData:
                 meta['imdb_id'] = imdb_id
                 meta['tvdb_id'] = tvdb_id
                 meta['title'] = name
-                meta['TVShowTitle'] = name
                 if str(show.rating) != '' and show.rating != None:
                     meta['rating'] = float(show.rating)
                 meta['duration'] = show.runtime
@@ -1338,7 +1395,8 @@ class MetaData:
         if meta:
             for movie in meta:
                 if movie['released']:
-                    year = self._convert_date(movie['released'], '%Y-%m-%d', '%Y')
+                    #year = self._convert_date(movie['released'], '%Y-%m-%d', '%Y')
+                    year = movie['released'][:4]
                 else:
                     year = None
                 movie_list.append({'title': movie['name'], 'imdb_id': movie['imdb_id'], 'tmdb_id': movie['id'], 'year': year})
@@ -1350,22 +1408,24 @@ class MetaData:
         return movie_list
 
             
-    def get_episode_meta(self, name, imdb_id, season, episode, overlay=''):
+    def get_episode_meta(self, tvshowtitle, imdb_id, season, episode, episode_title='', overlay=''):
         '''
         Requests meta data from TVDB for TV episodes, searches local cache db first.
         
         Args:
-            name (str): full name of tvshow you are searching
+            tvshowtitle (str): full name of tvshow you are searching
             imdb_id (str): IMDB ID
             season (int): tv show season number, number only no other characters
             episode (int): tv show episode number, number only no other characters
         Kwargs:
+            episode_title (str): The title of the episode, gets set to the title infolabel which must exist
             overlay (int): To set the default watched status (6=unwatched, 7=watched) on new videos
                         
         Returns:
             DICT. It must also return an empty dict when
             no meta info was found in order to save these.
         '''  
+              
         addon.log('---------------------------------------------------------------------------------------', 2)
         addon.log('Attempting to retreive episode meta data for: %s %s %s' % (imdb_id, season, episode), 2)
                
@@ -1381,7 +1441,7 @@ class MetaData:
             imdb_id = self._valid_imdb_id(imdb_id)
                 
         #Find tvdb_id for the TVshow
-        tvdb_id = self._get_tvdb_id(name, imdb_id)
+        tvdb_id = self._get_tvdb_id(tvshowtitle, imdb_id)
         
         #Check if it exists in local cache first
         meta = self._cache_lookup_episode(imdb_id, tvdb_id, season, episode)
@@ -1398,7 +1458,7 @@ class MetaData:
                 meta['episode_id'] = ''                
                 meta['season']= int(season)
                 meta['episode']= int(episode)
-                meta['title']= name
+                meta['title']= episode_title
                 meta['plot'] = ''
                 meta['director'] = ''
                 meta['writer'] = ''
@@ -1424,7 +1484,7 @@ class MetaData:
                 meta = self._get_tvdb_episode_data(tvdb_id, season, episode, dateSearch)
                 if meta is None:
                     meta = {}
-                    meta['title']= name
+                    meta['title']= episode_title
                     meta['director'] = ''
                     meta['writer'] = ''                    
                     meta['episode_id'] = ''
@@ -1437,7 +1497,7 @@ class MetaData:
                     meta['backdrop_url'] = ''                    
             else:
                 meta = {}
-                meta['title']= name
+                meta['title']= episode_title
                 meta['episode_id'] = ''
                 meta['plot'] = ''
                 meta['director'] = ''
@@ -1451,7 +1511,7 @@ class MetaData:
                 
             #if meta is not None:
             if not meta['title']:
-                meta['title']= name
+                meta['title']= episode_title
             meta['imdb_id']=imdb_id
             meta['tvdb_id']=tvdb_id
             meta['season']=int(season)
@@ -1478,7 +1538,7 @@ class MetaData:
         meta = self._remove_none_values(meta)
         
         #Add key for subtitles to work
-        meta['TVShowTitle']= name
+        meta['TVShowTitle']= tvshowtitle
         
         return meta
 
@@ -1642,6 +1702,7 @@ class MetaData:
                                'episode_meta.premiered as premiered, '
                                'tvshow_meta.studio as studio, '
                                'tvshow_meta.mpaa as mpaa, '
+                               'tvshow_meta.title as TVShowTitle, '
                                'episode_meta.imdb_id as imdb_id, '
                                'episode_meta.rating as rating, '
                                '"" as trailer_url, '
@@ -1792,11 +1853,11 @@ class MetaData:
         
         addon.log('Saving episode cache information: %s' % meta, 0)
         try:
-            self.dbcur.execute("INSERT INTO episode_meta VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                               (meta['imdb_id'], meta['tvdb_id'], meta['episode_id'], meta['season'], 
-                                meta['episode'], meta['title'], meta['director'], meta['writer'], 
-                                meta['plot'], meta['rating'], meta['premiered'], meta['poster'], 
-                                meta['overlay'])
+            sql_insert = self.__insert_from_dict('episode_meta', 13)
+            addon.log('SQL INSERT: %s' % sql_insert, 0)
+            self.dbcur.execute(sql_insert, (meta['imdb_id'], meta['tvdb_id'], meta['episode_id'], meta['season'], 
+                                meta['episode'], meta['title'], meta['director'], meta['writer'], meta['plot'], 
+                                meta['rating'], meta['premiered'], meta['poster'], meta['overlay'])
             )
             self.dbcon.commit()
         except Exception, e:
@@ -2025,12 +2086,13 @@ class MetaData:
         return cover_url
 
 
-    def get_seasons(self, name, imdb_id, seasons, overlay=6):
+    def get_seasons(self, tvshowtitle, imdb_id, seasons, overlay=6):
         '''
         Requests from TVDB a list of images for a given tvshow
         and list of seasons
         
         Args:
+            tvshowtitle (str): TV Show Title
             imdb_id (str): IMDB ID
             seasons (str): a list of seasons, numbers only
                         
@@ -2041,7 +2103,7 @@ class MetaData:
             imdb_id = self._valid_imdb_id(imdb_id)
                 
         coversList = []
-        tvdb_id = self._get_tvdb_id(name, imdb_id)
+        tvdb_id = self._get_tvdb_id(tvshowtitle, imdb_id)
         images  = None
         for season in seasons:
             meta = self._cache_lookup_season(imdb_id, tvdb_id, season)
@@ -2074,13 +2136,14 @@ class MetaData:
         return coversList
 
 
-    def update_season(self, name, imdb_id, season):
+    def update_season(self, tvshowtitle, imdb_id, season):
         '''
         Update an individual season:
             - looks up and deletes existing entry, saving watched flag (overlay)
             - re-scans TVDB for season image
         
         Args:
+            tvshowtitle (str): TV Show Title
             imdb_id (str): IMDB ID
             season (int): season number to be refreshed
                         
@@ -2089,10 +2152,10 @@ class MetaData:
         '''     
 
         #Find tvdb_id for the TVshow
-        tvdb_id = self._get_tvdb_id(name, imdb_id)
+        tvdb_id = self._get_tvdb_id(tvshowtitle, imdb_id)
 
         addon.log('---------------------------------------------------------------------------------------', 2)
-        addon.log('Updating season meta data: %s IMDB: %s TVDB ID: %s SEASON: %s' % (name, imdb_id, tvdb_id, season), 2)
+        addon.log('Updating season meta data: %s IMDB: %s TVDB ID: %s SEASON: %s' % (tvshowtitle, imdb_id, tvdb_id, season), 2)
 
       
         if imdb_id:
@@ -2111,7 +2174,7 @@ class MetaData:
             overlay = 6
             addon.log('No match found in cache db', 0)
 
-        return self.get_seasons(name, imdb_id, season, overlay)
+        return self.get_seasons(tvshowtitle, imdb_id, season, overlay)
 
 
     def _get_tvshow_backdrops(self, imdb_id, tvdb_id):
@@ -2206,9 +2269,10 @@ class MetaData:
                     
         addon.log('Saving season cache information: %s' % meta, 0)
         try:
-            self.dbcur.execute("INSERT INTO season_meta VALUES "
-                               "(%s, %s, %s, %s, %s)",
-                               (meta['imdb_id'],meta['tvdb_id'],meta['season'],meta['cover_url'],meta['overlay'])
+            sql_insert = self.__insert_from_dict('season_meta', 5)
+            addon.log('SQL Insert: %s' % sql_insert, 0)
+            self.dbcur.execute(sql_insert, (meta['imdb_id'],meta['tvdb_id'],meta['season'],
+                               meta['cover_url'],meta['overlay'])
                                )
             self.dbcon.commit()
         except Exception, e:
