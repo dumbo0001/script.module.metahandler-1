@@ -618,6 +618,17 @@ class MetaData:
         return sql_insert
 
 
+    def __set_playcount(self, overlay):
+        '''
+        Quick function to check overlay and set playcount
+        Playcount info label is required to have > 0 in order for watched flag to display in Frodo
+        '''
+        if int(overlay) == 7:
+            return 1
+        else:
+            return 0
+
+
     def check_meta_installed(self, addon_id):
         '''
         Check if a meta data pack has been installed for a specific addon
@@ -752,8 +763,8 @@ class MetaData:
         '''
        
         addon.log('---------------------------------------------------------------------------------------', 2)
-        addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (media_type, name, year, imdb_id, tmdb_id), 2)
-        
+        addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (media_type, name.encode('ascii','replace'), year, imdb_id, tmdb_id), 2)
+
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
 
@@ -777,8 +788,10 @@ class MetaData:
         meta['title'] = name
               
         #Change cast back into a tuple
-        if meta['cast']:
-            meta['cast'] = eval(meta['cast'])
+        #if meta['cast']:
+        #    meta['cast'] = eval(meta['cast'])
+        meta['cast'] = []
+        meta['cast'].append(('Mike', 'Bob'))
             
         #Return a trailer link that will play via youtube addon
         try:
@@ -793,6 +806,9 @@ class MetaData:
         #Add TVShowTitle infolabel
         if media_type==self.type_tvshow:
             meta['TVShowTitle'] = meta['title']
+        
+        #Set Watched flag
+        meta['playcount'] = self.__set_playcount(meta['overlay'])
         
         #if cache row says there are pre-packed images then either use them or create them
         if meta['imgs_prepacked'] == 'true':
@@ -856,7 +872,7 @@ class MetaData:
             DICT of meta data or None if cannot be found.
         '''
         addon.log('---------------------------------------------------------------------------------------', 2)
-        addon.log('Updating meta data: %s Old: %s %s New: %s %s Year: %s' % (name, imdb_id, tmdb_id, new_imdb_id, new_tmdb_id, year), 2)
+        addon.log('Updating meta data: %s Old: %s %s New: %s %s Year: %s' % (name.encode('ascii','replace'), imdb_id, tmdb_id, new_imdb_id, new_tmdb_id, year), 2)
         
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)        
@@ -1282,8 +1298,13 @@ class MetaData:
         tvdb = TheTVDB()
         tvdb_id = ''
         
-        if imdb_id:
-            tvdb_id = tvdb.get_show_by_imdb(imdb_id)
+        try:
+            if imdb_id:
+                tvdb_id = tvdb.get_show_by_imdb(imdb_id)
+        except Exception, e:
+            addon.log('************* Error retreiving from thetvdb.com: %s ' % e, 4)
+            tvdb_id = ''
+            pass
             
         #Intialize tvshow meta dictionary
         meta = self._init_tvshow_meta(imdb_id, tvdb_id, name, year)
@@ -1533,7 +1554,7 @@ class MetaData:
                 meta['overlay'] = int(overlay)
             else:
                 meta['overlay'] = self._get_watched_episode(meta)     
-                 
+                           
             self._cache_save_episode_meta(meta)
             
             meta['backdrop_url'] = self._get_tvshow_backdrops(imdb_id, tvdb_id)
@@ -1543,6 +1564,9 @@ class MetaData:
 
         #Ensure we are not sending back any None values, XBMC doesn't like them
         meta = self._remove_none_values(meta)
+
+        #Set Watched flag
+        meta['playcount'] = self.__set_playcount(meta['overlay'])
         
         #Add key for subtitles to work
         meta['TVShowTitle']= tvshowtitle
@@ -2131,12 +2155,15 @@ class MetaData:
                 meta['tvdb_id'] = tvdb_id
                 meta['imdb_id'] = imdb_id
                 meta['overlay'] = overlay
-                meta['backdrop_url'] = self._get_tvshow_backdrops(imdb_id, tvdb_id)                    
-                
+                meta['backdrop_url'] = self._get_tvshow_backdrops(imdb_id, tvdb_id)
+                              
                 #Ensure we are not sending back any None values, XBMC doesn't like them
                 meta = self._remove_none_values(meta)
                                 
                 self._cache_save_season_meta(meta)
+
+            #Set Watched flag
+            meta['playcount'] = self.__set_playcount(meta['overlay'])
             
             coversList.append(meta)
                    
