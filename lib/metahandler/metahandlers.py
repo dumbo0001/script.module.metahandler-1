@@ -144,7 +144,7 @@ class MetaData:
             db_pass = addon.get_setting('db_pass')
             db_name = addon.get_setting('db_name')
             self.dbcon = database.connect(db_name, db_user, db_pass, db_address, buffered=True)
-            self.dbcur = self.dbcon.cursor(cursor_class=MySQLCursorDict)
+            self.dbcur = self.dbcon.cursor(cursor_class=MySQLCursorDict, buffered=True)
         else:
             self.dbcon = database.connect(self.videocache)
             self.dbcon.row_factory = database.Row # return results indexed by field names and not numbers so we can convert to dict
@@ -157,18 +157,22 @@ class MetaData:
             try:
                 sql_select = 'select * from tvshow_meta'
                 self.dbcur.execute(sql_select)
-                matchedrow = self.dbcur.fetchone()
+                matchedrow = self.dbcur.fetchall()
             except:
                 table_exists = False
 
             if table_exists:
                 sql_select = 'SELECT year FROM tvshow_meta'
-                sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
+                if DB == 'mysql':
+                    sql_alter = 'RENAME TABLE tvshow_meta TO tmp_tvshow_meta'
+                else:
+                    sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
                 try:
                     self.dbcur.execute(sql_select)
-                    matchedrow = self.dbcur.fetchone()
-                except Exception:
+                    matchedrow = self.dbcur.fetchall()
+                except Exception, e:
                     print '************* tvshow year column does not exist - creating temp table'
+                    print e
                     self.dbcur.execute(sql_alter)
                     self.dbcon.commit()
     
@@ -181,12 +185,15 @@ class MetaData:
         
         # !!!!!!!! TEMPORARY CODE !!!!!!!!!!!!!!!
         
-        sql_insert = "INSERT INTO tvshow_meta (imdb_id, tvdb_id, title, year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay) SELECT imdb_id, tvdb_id, title, cast(substr(premiered, 1,4) as integer) as year, [cast], rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay FROM tmp_tvshow_meta"
+        if DB == 'mysql':
+            sql_insert = "INSERT INTO tvshow_meta (imdb_id, tvdb_id, title, year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay) SELECT imdb_id, tvdb_id, title, cast(substr(premiered, 1,4) as unsigned) as year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay FROM tmp_tvshow_meta"
+        else:
+            sql_insert = "INSERT INTO tvshow_meta (imdb_id, tvdb_id, title, year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay) SELECT imdb_id, tvdb_id, title, cast(substr(premiered, 1,4) as integer) as year, [cast], rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay FROM tmp_tvshow_meta"
         sql_select = 'SELECT imdb_id from tmp_tvshow_meta'
         sql_drop = 'DROP TABLE tmp_tvshow_meta'
         try:
             self.dbcur.execute(sql_select)
-            matchedrow = self.dbcur.fetchone()
+            matchedrow = self.dbcur.fetchall()
             self.dbcur.execute(sql_insert)
             self.dbcon.commit()
             self.dbcur.execute(sql_drop)
@@ -725,13 +732,13 @@ class MetaData:
             return
                     
 
-    def get_meta(self, type, name, imdb_id='', tmdb_id='', year='', overlay=6):
+    def get_meta(self, media_type, name, imdb_id='', tmdb_id='', year='', overlay=6):
         '''
         Main method to get meta data for movie or tvshow. Will lookup by name/year 
         if no IMDB ID supplied.       
         
         Args:
-            type (str): 'movie' or 'tvshow'
+            media_type (str): 'movie' or 'tvshow'
             name (str): full name of movie/tvshow you are searching            
         Kwargs:
             imdb_id (str): IMDB ID        
@@ -745,26 +752,26 @@ class MetaData:
         '''
        
         addon.log('---------------------------------------------------------------------------------------', 2)
-        addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (type, name, year, imdb_id, tmdb_id), 2)
+        addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (media_type, name, year, imdb_id, tmdb_id), 2)
         
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
 
         if imdb_id:
-            meta = self._cache_lookup_by_id(type, imdb_id=imdb_id)
+            meta = self._cache_lookup_by_id(media_type, imdb_id=imdb_id)
         elif tmdb_id:
-            meta = self._cache_lookup_by_id(type, tmdb_id=tmdb_id)
+            meta = self._cache_lookup_by_id(media_type, tmdb_id=tmdb_id)
         else:
-            meta = self._cache_lookup_by_name(type, name, year)
+            meta = self._cache_lookup_by_name(media_type, name, year)
 
         if not meta:
             
-            if type==self.type_movie:
+            if media_type==self.type_movie:
                 meta = self._get_tmdb_meta(imdb_id, tmdb_id, name, year)
-            elif type==self.type_tvshow:
+            elif media_type==self.type_tvshow:
                 meta = self._get_tvdb_meta(imdb_id, name, year)
             
-            self._cache_save_video_meta(meta, name, type, overlay)
+            self._cache_save_video_meta(meta, name, media_type, overlay)
 
         #We want to send back the name that was passed in   
         meta['title'] = name
@@ -784,17 +791,17 @@ class MetaData:
         meta = self._remove_none_values(meta)
         
         #Add TVShowTitle infolabel
-        if type==self.type_tvshow:
+        if media_type==self.type_tvshow:
             meta['TVShowTitle'] = meta['title']
         
         #if cache row says there are pre-packed images then either use them or create them
         if meta['imgs_prepacked'] == 'true':
 
                 #define the image paths               
-                if type == self.type_movie:
+                if media_type == self.type_movie:
                     root_covers = self.mvcovers
                     root_backdrops = self.mvbackdrops
-                elif type == self.type_tvshow:
+                elif media_type == self.type_tvshow:
                     root_covers = self.tvcovers
                     root_backdrops = self.tvbackdrops
                     root_banners = self.tvbanners
@@ -825,7 +832,7 @@ class MetaData:
         return meta  
 
 
-    def update_meta(self, type, name, imdb_id, tmdb_id='', new_imdb_id='', new_tmdb_id='', year=''):
+    def update_meta(self, media_type, name, imdb_id, tmdb_id='', new_imdb_id='', new_tmdb_id='', year=''):
         '''
         Updates and returns meta data for given movie/tvshow, mainly to be used with refreshing individual movies.
         
@@ -855,15 +862,15 @@ class MetaData:
             imdb_id = self._valid_imdb_id(imdb_id)        
         
         if imdb_id:
-            meta = self._cache_lookup_by_id(type, imdb_id=imdb_id)
+            meta = self._cache_lookup_by_id(media_type, imdb_id=imdb_id)
         elif tmdb_id:
-            meta = self._cache_lookup_by_id(type, tmdb_id=tmdb_id)
+            meta = self._cache_lookup_by_id(media_type, tmdb_id=tmdb_id)
         else:
-            meta = self._cache_lookup_by_name(type, name, year)
+            meta = self._cache_lookup_by_name(media_type, name, year)
         
         if meta:
             overlay = meta['overlay']
-            self._cache_delete_video_meta(type, imdb_id, tmdb_id, name, year)
+            self._cache_delete_video_meta(media_type, imdb_id, tmdb_id, name, year)
         else:
             overlay = 6
             addon.log('No match found in cache db', 3)
@@ -873,33 +880,33 @@ class MetaData:
         elif not new_tmdb_id:
             new_tmdb_id = tmdb_id
             
-        return self.get_meta(type, name, new_imdb_id, new_tmdb_id, year, overlay)
+        return self.get_meta(media_type, name, new_imdb_id, new_tmdb_id, year, overlay)
 
 
-    def _cache_lookup_by_id(self, type, imdb_id='', tmdb_id=''):
+    def _cache_lookup_by_id(self, media_type, imdb_id='', tmdb_id=''):
         '''
         Lookup in SQL DB for video meta data by IMDB ID
         
         Args:
             imdb_id (str): IMDB ID
-            type (str): 'movie' or 'tvshow'
+            media_type (str): 'movie' or 'tvshow'
         Kwargs:
             imdb_id (str): IDMB ID
             tmdb_id (str): TMDB ID                        
         Returns:
             DICT of matched meta data or None if no match.
         '''        
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             sql_select = "SELECT * FROM movie_meta"
             if imdb_id:
                 sql_select = sql_select + " WHERE imdb_id = '%s'" % imdb_id
             else:
                 sql_select = sql_select + " WHERE tmdb_id = '%s'" % tmdb_id
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             sql_select = "SELECT a.*, CASE WHEN b.episode ISNULL THEN 0 ELSE b.episode END AS episode, CASE WHEN c.playcount ISNULL THEN 0 ELSE c.playcount END as playcount FROM tvshow_meta a LEFT JOIN (SELECT imdb_id, count(imdb_id) AS episode FROM episode_meta WHERE imdb_id = '%s' GROUP BY imdb_id) b ON a.imdb_id = b.imdb_id LEFT JOIN (SELECT imdb_id, count(imdb_id) AS playcount FROM episode_meta WHERE imdb_id = '%s' AND overlay=7 GROUP BY imdb_id) c ON a.imdb_id = c.imdb_id WHERE a.imdb_id = '%s'" % (imdb_id, imdb_id, imdb_id)
             if DB == 'mysql':
                 sql_select = sql_select.replace("ISNULL", "IS NULL")
-        addon.log('Looking up in local cache by id for: %s %s %s' % (type, imdb_id, tmdb_id), 0)
+        addon.log('Looking up in local cache by id for: %s %s %s' % (media_type, imdb_id, tmdb_id), 0)
         addon.log( 'SQL Select: %s' % sql_select, 0)
         try:    
             self.dbcur.execute(sql_select)
@@ -916,12 +923,12 @@ class MetaData:
             return None
 
 
-    def _cache_lookup_by_name(self, type, name, year=''):
+    def _cache_lookup_by_name(self, media_type, name, year=''):
         '''
         Lookup in SQL DB for video meta data by name and year
         
         Args:
-            type (str): 'movie' or 'tvshow'
+            media_type (str): 'movie' or 'tvshow'
             name (str): full name of movie/tvshow you are searching
         Kwargs:
             year (str): 4 digit year of video, recommended to include the year whenever possible
@@ -932,16 +939,16 @@ class MetaData:
         '''        
 
         name =  self._clean_string(name.lower())
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             sql_select = "SELECT * FROM movie_meta WHERE title = '%s'" % name
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             sql_select = "SELECT a.*, CASE WHEN b.episode ISNULL THEN 0 ELSE b.episode END AS episode, CASE WHEN c.playcount ISNULL THEN 0 ELSE c.playcount END as playcount FROM tvshow_meta a LEFT JOIN (SELECT imdb_id, count(imdb_id) AS episode FROM episode_meta GROUP BY imdb_id) b ON a.imdb_id = b.imdb_id LEFT JOIN (SELECT imdb_id, count(imdb_id) AS playcount FROM episode_meta WHERE overlay=7 GROUP BY imdb_id) c ON a.imdb_id = c.imdb_id WHERE a.title = '%s'" % name
             if DB == 'mysql':
                 sql_select = sql_select.replace("ISNULL", "IS NULL")
-        addon.log('Looking up in local cache by name for: %s %s %s' % (type, name, year), 0)
+        addon.log('Looking up in local cache by name for: %s %s %s' % (media_type, name, year), 0)
         
         # movie_meta doesn't have a year column
-        if year and type == self.type_movie:
+        if year and media_type == self.type_movie:
             sql_select = sql_select + " AND year = %s" % year
         addon.log('SQL Select: %s' % sql_select, 0)
         
@@ -960,12 +967,12 @@ class MetaData:
             return None
 
 
-    def _cache_lookup_by_name(self, type, name, year=''):
+    def _cache_lookup_by_name(self, media_type, name, year=''):
         '''
         Lookup in SQL DB for video meta data by name and year
         
         Args:
-            type (str): 'movie' or 'tvshow'
+            media_type (str): 'movie' or 'tvshow'
             name (str): full name of movie/tvshow you are searching
         Kwargs:
             year (str): 4 digit year of video, recommended to include the year whenever possible
@@ -976,16 +983,16 @@ class MetaData:
         '''        
 
         name =  self._clean_string(name.lower())
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             sql_select = "SELECT * FROM movie_meta WHERE title = '%s'" % name
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             sql_select = "SELECT a.*, CASE WHEN b.episode ISNULL THEN 0 ELSE b.episode END AS episode, CASE WHEN c.playcount ISNULL THEN 0 ELSE c.playcount END as playcount FROM tvshow_meta a LEFT JOIN (SELECT imdb_id, count(imdb_id) AS episode FROM episode_meta GROUP BY imdb_id) b ON a.imdb_id = b.imdb_id LEFT JOIN (SELECT imdb_id, count(imdb_id) AS playcount FROM episode_meta WHERE overlay=7 GROUP BY imdb_id) c ON a.imdb_id = c.imdb_id WHERE a.title = '%s'" % name
             if DB == 'mysql':
                 sql_select = sql_select.replace("ISNULL", "IS NULL")
-        addon.log('Looking up in local cache by name for: %s %s %s' % (type, name, year), 0)
+        addon.log('Looking up in local cache by name for: %s %s %s' % (media_type, name, year), 0)
         
         # movie_meta doesn't have a year column
-        # if year and type == self.type_movie:
+        # if year and media_type == self.type_movie:
             # sql_select = sql_select + " AND year = %s" % year
         addon.log('SQL Select: %s' % sql_select, 0)
         
@@ -1004,19 +1011,19 @@ class MetaData:
             return None
 
     
-    def _cache_save_video_meta(self, meta, name, type, overlay=6):
+    def _cache_save_video_meta(self, meta, name, media_type, overlay=6):
         '''
         Saves meta data to SQL table given type
         
         Args:
             meta (dict): meta data of video to be added to database
-            type (str): 'movie' or 'tvshow'
+            media_type (str): 'movie' or 'tvshow'
         Kwargs:
             overlay (int): To set the default watched status (6=unwatched, 7=watched) on new videos                        
         '''            
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             table='movie_meta'
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             table='tvshow_meta'
         
         #strip title
@@ -1028,7 +1035,7 @@ class MetaData:
         else:           
             sql_select = "SELECT * FROM %s WHERE title = '%s'" % (table, meta['title'])
 
-            if meta.has_key('year') and type == self.type_movie:
+            if meta.has_key('year') and media_type == self.type_movie:
                 if meta['year']:
                     sql_select = sql_select + " AND year = '%s'" % meta['year']
 
@@ -1063,7 +1070,7 @@ class MetaData:
         addon.log('Saving cache information: %s' % meta, 0)
 
         try:
-            if type == self.type_movie:
+            if media_type == self.type_movie:
                 sql_insert = self.__insert_from_dict(table, 22)
                 addon.log('SQL INSERT: %s' % sql_insert, 0)
 
@@ -1072,7 +1079,7 @@ class MetaData:
                                 meta['rating'], meta['votes'], meta['duration'], meta['plot'], meta['mpaa'],
                                 meta['premiered'], meta['genre'], meta['studio'], meta['thumb_url'], meta['cover_url'],
                                 meta['trailer_url'], meta['backdrop_url'], meta['imgs_prepacked'], meta['overlay']))
-            elif type == self.type_tvshow:
+            elif media_type == self.type_tvshow:
                 sql_insert = self.__insert_from_dict(table, 19)
                 addon.log('SQL INSERT: %s' % sql_insert, 0)
 
@@ -1087,12 +1094,12 @@ class MetaData:
             pass 
 
 
-    def _cache_delete_video_meta(self, type, imdb_id, tmdb_id, name, year):
+    def _cache_delete_video_meta(self, media_type, imdb_id, tmdb_id, name, year):
         '''
         Delete meta data from SQL table
         
         Args:
-            type (str): 'movie' or 'tvshow'
+            media_type (str): 'movie' or 'tvshow'
             imdb_id (str): IMDB ID
             tmdb_id (str): TMDB ID   
             name (str): Full movie name
@@ -1100,9 +1107,9 @@ class MetaData:
                         
         '''         
         
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             table = 'movie_meta'
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             table = 'tvshow_meta'
             
         if imdb_id:
@@ -1866,21 +1873,21 @@ class MetaData:
             pass        
 
 
-    def update_trailer(self, type, imdb_id, trailer, tmdb_id=''):
+    def update_trailer(self, media_type, imdb_id, trailer, tmdb_id=''):
         '''
         Change watched status on video
         
         Args:
-            type (str): type of video to update, 'movie', 'tvshow' or 'episode'
+            media_type (str): media_type of video to update, 'movie', 'tvshow' or 'episode'
             imdb_id (str): IMDB ID
             trailer (str): url of youtube video
         Kwargs:            
             tmdb_id (str): TMDB ID
                         
         '''      
-        if type == 'movie':
+        if media_type == 'movie':
             table='movie_meta'
-        elif type == 'tvshow':
+        elif media_type == 'tvshow':
             table='tvshow_meta'
         
         if imdb_id:
@@ -1891,7 +1898,7 @@ class MetaData:
         elif tmdb_id:
             sql_update = "UPDATE %s set trailer_url='%s' WHERE tmdb_id = '%s'" % (table, trailer, tmdb_id)
                
-        addon.log('Updating trailer for type: %s, imdb id: %s, tmdb_id: %s, trailer: %s' % (type, imdb_id, tmdb_id, trailer), 0)
+        addon.log('Updating trailer for type: %s, imdb id: %s, tmdb_id: %s, trailer: %s' % (media_type, imdb_id, tmdb_id, trailer), 0)
         addon.log('SQL UPDATE: %s' % sql_update, 0)
         try:    
             self.dbcur.execute(sql_update)
@@ -1901,37 +1908,37 @@ class MetaData:
             pass          
 
 
-    def change_watched(self, type, name, imdb_id, tmdb_id='', season='', episode='', year='', watched=''):
+    def change_watched(self, media_type, name, imdb_id, tmdb_id='', season='', episode='', year='', watched=''):
         '''
         Change watched status on video
         
         Args:
             imdb_id (str): IMDB ID
-            type (str): type of video to update, 'movie', 'tvshow' or 'episode'
+            media_type (str): type of video to update, 'movie', 'tvshow' or 'episode'
             name (str): name of video
         Kwargs:            
             season (str): season number
                         
         '''   
         addon.log('---------------------------------------------------------------------------------------', 2)
-        addon.log('Updating watched flag for: %s %s %s %s %s %s %s' % (type, name, imdb_id, tmdb_id, season, episode, year), 2)
+        addon.log('Updating watched flag for: %s %s %s %s %s %s %s' % (media_type, name, imdb_id, tmdb_id, season, episode, year), 2)
 
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
 
         tvdb_id = ''
-        if type in (self.type_tvshow, self.type_season):
+        if media_type in (self.type_tvshow, self.type_season):
             tvdb_id = self._get_tvdb_id(name, imdb_id)                                  
         
-        if type in (self.type_movie, self.type_tvshow, self.type_season):
+        if media_type in (self.type_movie, self.type_tvshow, self.type_season):
             if not watched:
-                watched = self._get_watched(type, imdb_id, tmdb_id, season=season)
+                watched = self._get_watched(media_type, imdb_id, tmdb_id, season=season)
                 if watched == 6:
                     watched = 7
                 else:
                     watched = 6
-            self._update_watched(imdb_id, type, watched, tmdb_id=tmdb_id, name=self._clean_string(name.lower()), year=year, season=season, tvdb_id=tvdb_id)                
-        elif type == self.type_episode:
+            self._update_watched(imdb_id, media_type, watched, tmdb_id=tmdb_id, name=self._clean_string(name.lower()), year=year, season=season, tvdb_id=tvdb_id)                
+        elif media_type == self.type_episode:
             if tvdb_id is None:
                 tvdb_id = ''
             tmp_meta = {}
@@ -1947,16 +1954,16 @@ class MetaData:
                     watched = 7
                 else:
                     watched = 6
-            self._update_watched(imdb_id, type, watched, name=name, season=season, episode=episode, tvdb_id=tvdb_id)
+            self._update_watched(imdb_id, media_type, watched, name=name, season=season, episode=episode, tvdb_id=tvdb_id)
                 
 
-    def _update_watched(self, imdb_id, type, new_value, tmdb_id='', name='', year='', season='', episode='', tvdb_id=''):
+    def _update_watched(self, imdb_id, media_type, new_value, tmdb_id='', name='', year='', season='', episode='', tvdb_id=''):
         '''
         Commits the DB update for the watched status
         
         Args:
             imdb_id (str): IMDB ID
-            type (str): type of video to update, 'movie', 'tvshow' or 'episode'
+            media_type (str): type of video to update, 'movie', 'tvshow' or 'episode'
             new_value (int): value to update overlay field with
         Kwargs:
             name (str): name of video        
@@ -1964,7 +1971,7 @@ class MetaData:
             tvdb_id (str): tvdb id of tvshow                        
 
         '''      
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             if imdb_id:
                 sql_update="UPDATE movie_meta SET overlay = %s WHERE imdb_id = '%s'" % (new_value, imdb_id)
             elif tmdb_id:
@@ -1973,14 +1980,14 @@ class MetaData:
                 sql_update="UPDATE movie_meta SET overlay = %s WHERE title = '%s'" % (new_value, name)
                 if year:
                     sql_update = sql_update + ' AND year=%s' % year
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             if imdb_id:
                 sql_update="UPDATE tvshow_meta SET overlay = %s WHERE imdb_id = '%s'" % (new_value, imdb_id)
             elif tvdb_id:
                 sql_update="UPDATE tvshow_meta SET overlay = %s WHERE tvdb_id = '%s'" % (new_value, tvdb_id)
-        elif type == self.type_season:
+        elif media_type == self.type_season:
             sql_update="UPDATE season_meta SET overlay = %s WHERE imdb_id = '%s' AND season = %s" % (new_value, imdb_id, season)        
-        elif type == self.type_episode:
+        elif media_type == self.type_episode:
             if imdb_id:
                 sql_update="UPDATE episode_meta SET overlay = %s WHERE imdb_id = '%s' AND season = %s AND episode = %s" % (new_value, imdb_id, season, episode)
             elif tvdb_id:
@@ -1988,7 +1995,7 @@ class MetaData:
         else: # Something went really wrong
             return None
 
-        addon.log('Updating watched status for type: %s, imdb id: %s, tmdb_id: %s, new value: %s' % (type, imdb_id, tmdb_id, new_value), 0)
+        addon.log('Updating watched status for type: %s, imdb id: %s, tmdb_id: %s, new value: %s' % (media_type, imdb_id, tmdb_id, new_value), 0)
         addon.log('SQL UPDATE: %s' % sql_update, 0)
         try:
             self.dbcur.execute(sql_update)
@@ -1998,26 +2005,26 @@ class MetaData:
             pass    
 
 
-    def _get_watched(self, type, imdb_id, tmdb_id, season=''):
+    def _get_watched(self, media_type, imdb_id, tmdb_id, season=''):
         '''
         Finds the watched status of the video from the cache db
         
         Args:
-            type (str): type of video to update, 'movie', 'tvshow' or 'episode'                    
+            media_type (str): type of video to update, 'movie', 'tvshow' or 'episode'                    
             imdb_id (str): IMDB ID
             tmdb_id (str): TMDB ID
         Kwargs:
             season (int): tv show season number    
 
         ''' 
-        if type == self.type_movie:
+        if media_type == self.type_movie:
             if imdb_id:
                 sql_select="SELECT overlay FROM movie_meta WHERE imdb_id = '%s'" % imdb_id
             elif tmdb_id:
                 sql_select="SELECT overlay FROM movie_meta WHERE tmdb_id = '%s'" % tmdb_id
-        elif type == self.type_tvshow:
+        elif media_type == self.type_tvshow:
             sql_select="SELECT overlay FROM tvshow_meta WHERE imdb_id = '%s'" % imdb_id
-        elif type == self.type_season:
+        elif media_type == self.type_season:
             sql_select = "SELECT overlay FROM season_meta WHERE imdb_id = '%s' AND season = %s" % (imdb_id, season)
         
         addon.log('SQL Select: %s' % sql_select, 0)
