@@ -157,7 +157,7 @@ class MetaData:
             try:
                 sql_select = 'select * from tvshow_meta'
                 self.dbcur.execute(sql_select)
-                matchedrow = self.dbcur.fetchall()
+                matchedrow = self.dbcur.fetchone()
             except:
                 table_exists = False
 
@@ -169,7 +169,7 @@ class MetaData:
                     sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
                 try:
                     self.dbcur.execute(sql_select)
-                    matchedrow = self.dbcur.fetchall()
+                    matchedrow = self.dbcur.fetchone()
                 except Exception, e:
                     print '************* tvshow year column does not exist - creating temp table'
                     print e
@@ -193,7 +193,7 @@ class MetaData:
         sql_drop = 'DROP TABLE tmp_tvshow_meta'
         try:
             self.dbcur.execute(sql_select)
-            matchedrow = self.dbcur.fetchall()
+            matchedrow = self.dbcur.fetchone()
             self.dbcur.execute(sql_insert)
             self.dbcon.commit()
             self.dbcur.execute(sql_drop)
@@ -763,8 +763,11 @@ class MetaData:
         '''
        
         addon.log('---------------------------------------------------------------------------------------', 2)
-        addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (media_type, name.encode('ascii','replace'), year, imdb_id, tmdb_id), 2)
-
+        try:
+            addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (type, name, year, imdb_id, tmdb_id), 2)
+        except:
+            print 'Attempting to retreive meta data for %s: %s %s %s %s' % (type, name, year, imdb_id, tmdb_id)
+ 
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
 
