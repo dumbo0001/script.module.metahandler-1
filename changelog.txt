@@ -1,4 +1,4 @@
-[B]Version 1.0.2[/B]
+[B]Version 2.0.2[/B]
 - Added MySQL support
 - Added Year column for TV Shows - Temporary upgrade code in place
 - Playcount now set for Watched Status in Frodo
