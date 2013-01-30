@@ -763,10 +763,7 @@ class MetaData:
         '''
        
         addon.log('---------------------------------------------------------------------------------------', 2)
-        try:
-            addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (type, name, year, imdb_id, tmdb_id), 2)
-        except:
-            print 'Attempting to retreive meta data for %s: %s %s %s %s' % (type, name, year, imdb_id, tmdb_id)
+        addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (media_type, name.decode('utf-8'), year, imdb_id, tmdb_id), 2)
  
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
@@ -788,7 +785,7 @@ class MetaData:
             self._cache_save_video_meta(meta, name, media_type, overlay)
 
         #We want to send back the name that was passed in   
-        meta['title'] = name
+        meta['title'] = name.decode('utf-8')
               
         #Change cast back into a tuple
         #if meta['cast']:
