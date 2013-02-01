@@ -157,7 +157,7 @@ class MetaData:
             try:
                 sql_select = 'select * from tvshow_meta'
                 self.dbcur.execute(sql_select)
-                matchedrow = self.dbcur.fetchone()
+                matchedrow = self.dbcur.fetchall()[0]
             except:
                 table_exists = False
 
@@ -169,7 +169,7 @@ class MetaData:
                     sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
                 try:
                     self.dbcur.execute(sql_select)
-                    matchedrow = self.dbcur.fetchone()
+                    matchedrow = self.dbcur.fetchall()[0]
                 except Exception, e:
                     print '************* tvshow year column does not exist - creating temp table'
                     print e
