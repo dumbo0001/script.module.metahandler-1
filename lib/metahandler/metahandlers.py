@@ -793,10 +793,8 @@ class MetaData:
         meta['title'] = name.decode('utf-8')
               
         #Change cast back into a tuple
-        #if meta['cast']:
-        #    meta['cast'] = eval(meta['cast'])
-        meta['cast'] = []
-        meta['cast'].append(('Mike', 'Bob'))
+        if meta['cast']:
+            meta['cast'] = eval(meta['cast'])
             
         #Return a trailer link that will play via youtube addon
         try:
