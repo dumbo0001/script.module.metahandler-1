@@ -184,15 +184,15 @@ class MetaContainer:
             mysql_cur = db.cursor()
             work_db = sqlite.connect(self.work_videocache);
             rows = work_db.execute('SELECT * FROM %s' %table).fetchall()
-            
-            print 'Current table: %s' %table
-            
-            for row in rows:
-                num_args = len(row)
-                # print num_args
+
+            cur = work_db.cursor()
+            rows = cur.execute('SELECT * FROM %s' %table).fetchall()
+            if rows:
+                cols = ','.join([c[0] for c in cur.description])
+                num_args = len(rows[0])
                 args = ','.join(['%s']*num_args)
-                sql_insert = 'INSERT IGNORE INTO %s VALUES(%s)'%(table,args)
-                mysql_cur.execute(sql_insert, row)
+                sql_insert = 'INSERT IGNORE INTO %s (%s) VALUES(%s)'%(table, cols, args)
+                mysql_cur.executemany(sql_insert, rows)
             work_db.close()
 
         else:
