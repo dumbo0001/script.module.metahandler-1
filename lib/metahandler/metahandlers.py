@@ -157,7 +157,7 @@ class MetaData:
             try:
                 sql_select = 'select * from tvshow_meta'
                 self.dbcur.execute(sql_select)
-                matchedrow = self.dbcur.fetchone()
+                matchedrow = self.dbcur.fetchall()[0]
             except:
                 table_exists = False
 
@@ -169,7 +169,7 @@ class MetaData:
                     sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
                 try:
                     self.dbcur.execute(sql_select)
-                    matchedrow = self.dbcur.fetchone()
+                    matchedrow = self.dbcur.fetchall()[0]
                 except Exception, e:
                     print '************* tvshow year column does not exist - creating temp table'
                     print e
@@ -193,7 +193,7 @@ class MetaData:
         sql_drop = 'DROP TABLE tmp_tvshow_meta'
         try:
             self.dbcur.execute(sql_select)
-            matchedrow = self.dbcur.fetchone()
+            matchedrow = self.dbcur.fetchall()[0]
             self.dbcur.execute(sql_insert)
             self.dbcon.commit()
             self.dbcur.execute(sql_drop)
@@ -682,7 +682,7 @@ class MetaData:
         '''
 
         if addon_id:
-            sql_insert = "INSERT INTO addons(addon_id, movie_covers, tv_covers, tv_banners, movie_backdrops, tv_backdrops, last_update) VALUES (?,?,?,?,?,?,?)"
+            sql_insert = "INSERT INTO addons(addon_id, movie_covers, tv_covers, tv_banners, movie_backdrops, tv_backdrops, last_update) VALUES (%s,%s,%s,%s,%s,%s,%s)"
         else:
             addon.log('Invalid addon id', 3)
             return
