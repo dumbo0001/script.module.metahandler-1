@@ -10,6 +10,7 @@ currently very specific to icefilms.info
 
 import os,sys
 import shutil
+import xbmcvfs
 
 #necessary so that the metacontainers.py can use the scrapers
 try: import xbmc
@@ -74,11 +75,12 @@ class MetaContainer:
      
         addon.log('---------------------------------------------------------------------------------------', 2)
         #delete and re-create work_path to ensure no previous files are left over
-        if os.path.exists(self.work_path):
+        if xbmcvfs.exists(self.work_path):
             import shutil
             try:
                 addon.log('Removing previous work folder: %s' % self.work_path, 2)
-                shutil.rmtree(self.work_path)
+                # shutil.rmtree(self.work_path)
+                xbmcvfs.rmdir(self.work_path)
             except Exception, e:
                 addon.log('Failed to delete work folder: %s' % e, 4)
                 pass
@@ -97,7 +99,7 @@ class MetaContainer:
 
     def make_dir(self, mypath):
         ''' Creates sub-directories if they are not found. '''
-        if not os.path.exists(mypath): os.makedirs(mypath)   
+        if not xbmcvfs.exists(mypath): xbmcvfs.mkdirs(mypath)   
 
 
     def _del_metadir(self, path=''):
@@ -110,7 +112,7 @@ class MetaContainer:
         #Nuke the old meta_caches folder (if it exists) and install this meta_caches folder.
         #Will only ever delete a meta_caches folder, so is farly safe (won't delete anything it is fed)
 
-        if os.path.exists(catch_path):
+        if xbmcvfs.exists(catch_path):
                 try:
                     shutil.rmtree(catch_path)
                 except:
@@ -123,7 +125,7 @@ class MetaContainer:
 
     def _del_path(self, path):
 
-        if os.path.exists(path):
+        if xbmcvfs.exists(path):
                 try:
                     shutil.rmtree(path)
                 except:

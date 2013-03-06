@@ -31,6 +31,7 @@ from thetvdbapi import TheTVDB
 
 #necessary so that the metacontainers.py can use the scrapers
 import xbmc
+import xbmcvfs
 
 ''' Use t0mm0's common library for http calls '''
 from t0mm0.common.addon import Addon
@@ -69,7 +70,7 @@ except:
 def make_dir(mypath, dirname):
     ''' Creates sub-directories if they are not found. '''
     subpath = os.path.join(mypath, dirname)
-    if not os.path.exists(subpath): os.makedirs(subpath)
+    if not xbmcvfs.exists(subpath): xbmcvfs.mkdirs(subpath)
     return subpath
 
 
@@ -152,7 +153,7 @@ class MetaData:
 
 
         # !!!!!!!! TEMPORARY CODE !!!!!!!!!!!!!!!
-        if os.path.exists(self.videocache):
+        if xbmcvfs.exists(self.videocache):
             table_exists = True
             try:
                 sql_select = 'select * from tvshow_meta'
@@ -535,8 +536,8 @@ class MetaData:
             name (str): filename
         '''                 
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if not xbmcvfs.exists(path):
+            xbmcvfs.makedirs(path)
         
         full_path = os.path.join(path, name)
         self._dl_code(url, full_path)              
