@@ -537,7 +537,7 @@ class MetaData:
         '''                 
 
         if not xbmcvfs.exists(path):
-            xbmcvfs.makedirs(path)
+            xbmcvfs.mkdirs(path)
         
         full_path = os.path.join(path, name)
         self._dl_code(url, full_path)              
