@@ -808,7 +808,7 @@ class MetaData:
         '''      
 
         #We want to send back the name that was passed in   
-        meta['title'] = name.decode('utf-8')
+        meta['title'] = name
         
         #Change cast back into a tuple
         if meta['cast']:
