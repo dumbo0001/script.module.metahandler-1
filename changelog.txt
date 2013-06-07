@@ -1,4 +1,4 @@
-[B]Version 1.0.3.01[/B]
+[B]Version 1.0.4[/B]
 - Quick band aid patch for Eden users - xbmcvfs.mkdirs is not included in Eden
 
 [B]Version 1.0.3[/B]
