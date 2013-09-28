@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 from t0mm0.common.net import Net  
 from t0mm0.common.addon import Addon       
+from multiprocessing.pool import ThreadPool
 net = Net()
 addon = Addon('script.module.metahandler')
 
@@ -345,8 +346,11 @@ class TMDB(object):
             tmdb_id = imdb_id
 
         if tmdb_id:
-            meta = self._get_info(tmdb_id)
-            cast = self._get_cast(tmdb_id)
+            pool = ThreadPool(processes=2)
+            meta_result = pool.apply_async(self._get_info, (tmdb_id,))
+            cast_result = pool.apply_async(self._get_cast, (tmdb_id,))
+            meta = meta_result.get()
+            cast = cast_result.get()
 
             if meta is None: # fall through to IMDB lookup
                 meta = {}
