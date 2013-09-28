@@ -326,7 +326,7 @@ class TMDB(object):
         if not imdb_id and not tmdb_id:
             meta = self._search_movie(name,year)              
             ##Retry without the year
-            if meta and meta['total_results'] == 0:
+            if meta and meta['total_results'] == 0 and year:
                 meta = self._search_movie(name,'')
             if meta and meta['total_results'] != 0:
                 tmdb_id = meta['results'][0]['id']
