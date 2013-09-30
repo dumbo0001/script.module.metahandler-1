@@ -10,7 +10,11 @@ from datetime import datetime
 import time
 from t0mm0.common.net import Net  
 from t0mm0.common.addon import Addon       
-from multiprocessing.pool import ThreadPool
+from threading import Thread
+try:
+    import Queue as queue
+except ImportError:
+    import queue
 net = Net()
 addon = Addon('script.module.metahandler')
 
@@ -272,13 +276,17 @@ class TMDB(object):
         return self._do_request('movie/'+str(video_id), '')
 
 
-    def _get_info(self, tmdb_id):
+    def _get_info(self, tmdb_id, q = False):
         ''' Helper method to start a TMDB getInfo request '''            
-        return self._do_request('movie/'+str(tmdb_id), '')
+        r = self._do_request('movie/'+str(tmdb_id), '')
+        if q: q.put(r)
+        return r
     
-    def _get_cast(self, tmdb_id):
+    def _get_cast(self, tmdb_id, q = False):
         ''' Helper method to start a TMDB getCast request '''            
-        return self._do_request('movie/'+str(tmdb_id)+'/casts', '')
+        r = self._do_request('movie/'+str(tmdb_id)+'/casts', '')
+        if q: q.put(r)
+        return r
         
 
     def _search_movie(self, name, year=''):
@@ -346,11 +354,12 @@ class TMDB(object):
             tmdb_id = imdb_id
 
         if tmdb_id:
-            pool = ThreadPool(processes=2)
-            meta_result = pool.apply_async(self._get_info, (tmdb_id,))
-            cast_result = pool.apply_async(self._get_cast, (tmdb_id,))
-            meta = meta_result.get()
-            cast = cast_result.get()
+            metaQueue = queue.Queue()
+            castQueue = queue.Queue()
+            Thread(target=self._get_info, args=(tmdb_id,metaQueue)).start()
+            Thread(target=self._get_cast, args=(tmdb_id,castQueue)).start()
+            meta = metaQueue.get()
+            cast = castQueue.get()
 
             if meta is None: # fall through to IMDB lookup
                 meta = {}
@@ -384,3 +393,4 @@ class TMDB(object):
                 meta = self.update_imdb_meta({}, imdb_meta)
        
         return meta
+
