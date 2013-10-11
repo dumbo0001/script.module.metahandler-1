@@ -90,7 +90,7 @@ class MetaData:
     '''  
 
      
-    def __init__(self, path='special://profile/addon_data/script.module.metahandler/', preparezip=False):
+    def __init__(self, preparezip=False):
 
         #Check if a path has been set in the addon settings
         settings_path = common.addon.get_setting('meta_folder_location')
@@ -98,7 +98,7 @@ class MetaData:
         if settings_path:
             self.path = xbmc.translatePath(settings_path)
         else:
-            self.path = xbmc.translatePath(path)
+            self.path = xbmc.translatePath('special://profile/addon_data/script.module.metahandler')
         
         self.cache_path = make_dir(self.path, 'meta_cache')
 
@@ -2077,11 +2077,11 @@ class MetaData:
 
         '''       
         if meta['imdb_id']:
-            sql_select = 'SELECT * FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['episode'])
+            sql_select = 'SELECT * FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['premiered'])
         elif meta['tvdb_id']:
-            sql_select = 'SELECT * FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['episode'])
+            sql_select = 'SELECT * FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['premiered'])
         else:         
-            sql_select = 'SELECT * FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['episode'])
+            sql_select = 'SELECT * FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['premiered'])
         common.addon.log('Getting episode watched status', 0)
         common.addon.log('SQL Select: %s' % sql_select, 0)
         try:
