@@ -4,7 +4,12 @@
 # added support for TVDB search for show, seasons, episodes
 # also searches imdb (using http://www.imdbapi.com/) for missing info in movies or tvshows
 
-import simplejson
+import sys
+if sys.version_info >=  (2, 7):
+    import _json as simplejson
+else:
+    import simplejson as simplejson 
+
 import urllib, re
 from datetime import datetime
 import time
@@ -29,7 +34,7 @@ class TMDB(object):
     def __init__(self, api_key='b91e899ce561dd19695340c3b26e0a02', view='json', lang='en'):
         #view = yaml json xml
         self.view = view
-        self.lang = self.__get_language()
+        self.lang = self.__get_language(lang)
         self.api_key = api_key
         self.url_prefix = 'http://api.themoviedb.org/3'
         self.poster_prefix = 'http://d3gtl9l2a4fn1j.cloudfront.net/t/p/' + addon.get_setting('tmdb_poster_size')
@@ -38,9 +43,12 @@ class TMDB(object):
         self.imdb_name_api = 'http://www.imdbapi.com/?t=%s'
         self.imdb_nameyear_api = 'http://www.imdbapi.com/?t=%s&y=%s' 
 
-    def __get_language(self):
+    def __get_language(self, lang):
         tmdb_language = addon.get_setting('tmdb_language')
-        return re.sub(".*\((\w+)\).*","\\1",tmdb_language)
+        if tmdb_language:
+            return re.sub(".*\((\w+)\).*","\\1",tmdb_language)
+        else:
+            return lang
 
     def __clean_name(self, mystring):
         newstring = ''
