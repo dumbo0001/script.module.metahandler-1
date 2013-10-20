@@ -2456,7 +2456,6 @@ class MetaData:
 
         placeholder= '?'
         placeholders= ', '.join(placeholder for x in batch_ids)
-        print placeholders
         
         ids = []
         if media_type == self.type_movie:
@@ -2495,7 +2494,6 @@ class MetaData:
                 return None
 
         common.addon.log( 'SQL Select: %s' % sql_select, 0)
-        print ids
 
         try:
             self.dbcur.execute(sql_select, ids)
