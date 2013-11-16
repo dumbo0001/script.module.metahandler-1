@@ -2020,7 +2020,7 @@ class MetaData:
             
             #If we have an air date use that instead of season/episode #
             if air_date:
-                sql_update = sql_update + ' AND premiered = %s' % air_date
+                sql_update = sql_update + " AND premiered = '%s'" % air_date
             else:
                 sql_update = sql_update + ' AND season = %s AND episode = %s' % (season, episode)
                 
@@ -2083,11 +2083,17 @@ class MetaData:
 
         '''       
         if meta['imdb_id']:
-            sql_select = 'SELECT * FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['premiered'])
+            sql_select = "SELECT * FROM episode_meta WHERE imdb_id = '%s'"  % meta['imdb_id']
         elif meta['tvdb_id']:
-            sql_select = 'SELECT * FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['premiered'])
+            sql_select = "SELECT * FROM episode_meta WHERE tvdb_id = '%s'"  % meta['tvdb_id']
         else:         
-            sql_select = 'SELECT * FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s and premiered = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['premiered'])
+            sql_select = "SELECT * FROM episode_meta WHERE title = '%s'"  % self._clean_string(meta['title'].lower())
+        
+        if meta['premiered']:
+            sql_select += " AND premiered = '%s'" % meta['premiered']
+        else:
+            sql_select += ' AND season = %s AND episode = %s' % (meta['season'], meta['episode'])
+            
         common.addon.log('Getting episode watched status', 0)
         common.addon.log('SQL Select: %s' % sql_select, 0)
         try:
