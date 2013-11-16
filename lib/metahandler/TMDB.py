@@ -275,24 +275,32 @@ class TMDB(object):
         return meta
 
 
-    # video_id is either tmdb or imdb id
-    def _get_version(self, video_id):
-        ''' Helper method to start a TMDB getVersion request '''    
-        return self._do_request('movie/'+str(video_id), '')
-
-
     def _get_info(self, tmdb_id, q = False):
         ''' Helper method to start a TMDB getInfo request '''            
         r = self._do_request('movie/'+str(tmdb_id), '')
         if q: q.put(r)
         return r
-    
+
+
     def _get_cast(self, tmdb_id, q = False):
         ''' Helper method to start a TMDB getCast request '''            
         r = self._do_request('movie/'+str(tmdb_id)+'/casts', '')
         if q: q.put(r)
         return r
-        
+
+
+    def _get_trailer(self, tmdb_id, q = False):
+        ''' Helper method to start a TMDB trailer request '''            
+        r = self._do_request('movie/'+str(tmdb_id)+'/trailers', '')
+        if q: q.put(r)
+        return r
+
+
+    def _get_similar_movies(self, tmdb_id):
+        ''' Helper method to start a TMDB get similar movies request '''            
+        r = self._do_request('movie/'+str(tmdb_id)+'/similar_movies', '')
+        return r
+
 
     def _search_movie(self, name, year=''):
         ''' Helper method to start a TMDB Movie.search request - search by Name/Year '''
@@ -361,10 +369,13 @@ class TMDB(object):
         if tmdb_id:
             metaQueue = queue.Queue()
             castQueue = queue.Queue()
+            trailerQueue = queue.Queue()
             Thread(target=self._get_info, args=(tmdb_id,metaQueue)).start()
             Thread(target=self._get_cast, args=(tmdb_id,castQueue)).start()
+            Thread(target=self._get_trailer, args=(tmdb_id,trailerQueue)).start()
             meta = metaQueue.get()
             cast = castQueue.get()
+            trailers = trailerQueue.get()
 
             if meta is None: # fall through to IMDB lookup
                 meta = {}
@@ -381,9 +392,21 @@ class TMDB(object):
                 if cast:
                     meta['cast'] = cast['cast']
                     meta['crew'] = cast['crew']
+
+                if trailers:
+                    #We only want youtube trailers
+                    trailers = trailers['youtube']
+
+                    #Only want trailers - no Featurettes etc.
+                    found_trailer = next((item for item in trailers if 'Trailer' in item["name"] and item['type'] == 'Trailer'), None)
+                    if found_trailer:
+                        meta['trailers'] = found_trailer['source']
+                    else:
+                        meta['trailers'] = ''
+                else:
+                    meta['trailers'] = ''
+
                 #Update any missing information from IDMB
-                #if meta['overview'] == 'None' or meta['overview'] == '' or meta['overview'] == 'TBD' or meta['overview'] == 'No overview found.' or meta['rating'] == 0 or meta['runtime'] == 0 or meta['runtime'] == None or str(meta['genres']) == '[]' or str(meta['posters']) == '[]' or meta['released'] == None or meta['certification'] == None:
-                #addon.log('Some info missing in TMDB for Movie *** %s ***. Will search imdb for more' % imdb_id, 0)
                 if meta.has_key('imdb_id'):
                     imdb_id = meta['imdb_id']
                 addon.log('Requesting IMDB for extra information: %s' % imdb_id, 0)
