@@ -40,6 +40,8 @@ net = Net()
 
 sys.path.append((os.path.split(common.addon_path))[0])
 
+common.addon.log('Initializing MetaHandlers version: %s' % common.addon.get_version())
+
 '''
    Use SQLIte3 wherever possible, needed for newer versions of XBMC
    Keep pysqlite2 for legacy support
@@ -151,60 +153,6 @@ class MetaData:
             self.dbcon = database.connect(self.videocache)
             self.dbcon.row_factory = database.Row # return results indexed by field names and not numbers so we can convert to dict
             self.dbcur = self.dbcon.cursor()
-
-
-        # !!!!!!!! TEMPORARY CODE !!!!!!!!!!!!!!!
-        if xbmcvfs.exists(self.videocache):
-            table_exists = True
-            try:
-                sql_select = 'select * from tvshow_meta'
-                self.dbcur.execute(sql_select)
-                matchedrow = self.dbcur.fetchall()[0]
-            except:
-                table_exists = False
-
-            if table_exists:
-                sql_select = 'SELECT year FROM tvshow_meta'
-                if DB == 'mysql':
-                    sql_alter = 'RENAME TABLE tvshow_meta TO tmp_tvshow_meta'
-                else:
-                    sql_alter = 'ALTER TABLE tvshow_meta RENAME TO tmp_tvshow_meta'
-                try:
-                    self.dbcur.execute(sql_select)
-                    matchedrow = self.dbcur.fetchall()[0]
-                except Exception, e:
-                    print '************* tvshow year column does not exist - creating temp table'
-                    print e
-                    self.dbcur.execute(sql_alter)
-                    self.dbcon.commit()
-    
-        ## !!!!!!!!!!!!!!!!!!!!!!!
-
-
-        # initialize cache db
-        self._cache_create_movie_db()
-
-        
-        # !!!!!!!! TEMPORARY CODE !!!!!!!!!!!!!!!
-        
-        if DB == 'mysql':
-            sql_insert = "INSERT INTO tvshow_meta (imdb_id, tvdb_id, title, year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay) SELECT imdb_id, tvdb_id, title, cast(substr(premiered, 1,4) as unsigned) as year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay FROM tmp_tvshow_meta"
-        else:
-            sql_insert = "INSERT INTO tvshow_meta (imdb_id, tvdb_id, title, year, cast, rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay) SELECT imdb_id, tvdb_id, title, cast(substr(premiered, 1,4) as integer) as year, [cast], rating, duration, plot, mpaa, premiered, genre, studio, status, banner_url, cover_url, trailer_url, backdrop_url, imgs_prepacked, overlay FROM tmp_tvshow_meta"
-        sql_select = 'SELECT imdb_id from tmp_tvshow_meta'
-        sql_drop = 'DROP TABLE tmp_tvshow_meta'
-        try:
-            self.dbcur.execute(sql_select)
-            matchedrow = self.dbcur.fetchall()[0]
-            self.dbcur.execute(sql_insert)
-            self.dbcon.commit()
-            self.dbcur.execute(sql_drop)
-            self.dbcon.commit()
-        except Exception, e:
-            print '************* tmp_tvshow_meta does not exist: %s' % e
-
-        ## !!!!!!!!!!!!!!!!!!!!!!!
-
 
 
     def __del__(self):
@@ -819,11 +767,23 @@ class MetaData:
             
         #Return a trailer link that will play via youtube addon
         try:
-            trailer_id = re.match('^[^v]+v=(.{3,11}).*', meta['trailer_url']).group(1)
-            meta['trailer'] = 'plugin://plugin.video.youtube/?action=play_video&videoid=%s' % trailer_id
-        except:
             meta['trailer'] = ''
-        
+            trailer_id = ''
+            if meta['trailer_url']:
+                r = re.match('^[^v]+v=(.{3,11}).*', meta['trailer_url'])
+                if r:
+                    trailer_id = r.group(1)
+                else:
+                    trailer_id = meta['trailer_url']
+             
+            if trailer_id:
+                meta['trailer'] = 'plugin://plugin.video.youtube/?action=play_video&videoid=%s' % trailer_id
+                
+        except Exception, e:
+            meta['trailer'] = ''
+            common.addon.log('Failed to set trailer: %s' % e, 3)
+            pass
+
         #Ensure we are not sending back any None values, XBMC doesn't like them
         meta = self._remove_none_values(meta)
         
@@ -1167,7 +1127,7 @@ class MetaData:
         '''        
         
         tmdb = TMDB()        
-        meta = tmdb.tmdb_lookup(name,imdb_id,tmdb_id, year)       
+        meta = tmdb.tmdb_lookup(name,imdb_id,tmdb_id, year)
         
         if meta is None:
             # create an empty dict so below will at least populate empty data for the db insert.
@@ -1213,7 +1173,7 @@ class MetaData:
             #meta['year'] = int(self._convert_date(meta['premiered'], '%Y-%m-%d', '%Y'))
             meta['year'] = int(meta['premiered'][:4])
             
-        meta['trailer_url'] = md.get('trailer', '')
+        meta['trailer_url'] = md.get('trailers', '')
         meta['genre'] = md.get('genre', '')
         
         #Get cast, director, writers
@@ -1894,7 +1854,7 @@ class MetaData:
 
     def update_trailer(self, media_type, imdb_id, trailer, tmdb_id=''):
         '''
-        Change watched status on video
+        Change videos trailer
         
         Args:
             media_type (str): media_type of video to update, 'movie', 'tvshow' or 'episode'
