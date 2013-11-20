@@ -1416,7 +1416,37 @@ class MetaData:
         common.addon.log('Returning results: %s' % movie_list, 0)
         return movie_list
 
-            
+
+    def similar_movies(self, tmdb_id, page=1):
+        '''
+        Requests list of similar movies matching given tmdb id
+        
+        Args:
+            tmdb_id (str): MUST be a valid TMDB ID
+        Kwargs:
+            page (int): page number of result to fetch
+        Returns:
+            List of dicts - each movie in it's own dict with supporting info
+        ''' 
+        common.addon.log('---------------------------------------------------------------------------------------', 2)
+        common.addon.log('TMDB - requesting similar movies: %s' % tmdb_id, 2)
+        tmdb = TMDB()
+        movie_list = []
+        meta = tmdb.tmdb_similar_movies(tmdb_id, page)
+        if meta:
+            if meta['total_results'] == 0:
+                common.addon.log('No results found', 2)
+                return None
+            for movie in meta['results']:
+                movie_list.append(movie)
+        else:
+            common.addon.log('No results found', 2)
+            return None
+
+        common.addon.log('Returning results: %s' % movie_list, 0)
+        return movie_list
+
+
     def get_episode_meta(self, tvshowtitle, imdb_id, season, episode, air_date='', episode_title='', overlay=''):
         '''
         Requests meta data from TVDB for TV episodes, searches local cache db first.

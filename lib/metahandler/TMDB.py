@@ -296,9 +296,9 @@ class TMDB(object):
         return r
 
 
-    def _get_similar_movies(self, tmdb_id):
+    def _get_similar_movies(self, tmdb_id, page):
         ''' Helper method to start a TMDB get similar movies request '''            
-        r = self._do_request('movie/'+str(tmdb_id)+'/similar_movies', '')
+        r = self._do_request('movie/'+str(tmdb_id)+'/similar_movies', 'page=%s' % page)
         return r
 
 
@@ -308,7 +308,25 @@ class TMDB(object):
         if year:
             name = name + '&year=' + year
         return self._do_request('search/movie','query='+name)
+
+
+    def tmdb_similar_movies(self, tmdb_id, page=1):
+        '''
+        Query for a list of movies that are similar to the given id
         
+        MUST use a TMDB ID - NOT a IMDB ID
+        
+        Returns a tuple of matches containing movie name and imdb id
+        
+        Args:
+            tmdb_id (str): MUST be a valid TMDB ID
+            page (int): Page # of results to return - check # of pages first before calling subsequent pages
+                        
+        Returns:
+            DICT of matches
+        '''
+        return self._get_similar_movies(tmdb_id, page)
+
 
     def tmdb_search(self, name):
         '''
@@ -367,19 +385,22 @@ class TMDB(object):
             tmdb_id = imdb_id
 
         if tmdb_id:
-            metaQueue = queue.Queue()
+            #metaQueue = queue.Queue()
             castQueue = queue.Queue()
             trailerQueue = queue.Queue()
-            Thread(target=self._get_info, args=(tmdb_id,metaQueue)).start()
-            Thread(target=self._get_cast, args=(tmdb_id,castQueue)).start()
-            Thread(target=self._get_trailer, args=(tmdb_id,trailerQueue)).start()
-            meta = metaQueue.get()
-            cast = castQueue.get()
-            trailers = trailerQueue.get()
+            #Thread(target=self._get_info, args=(tmdb_id,metaQueue)).start()
+            #meta = metaQueue.get()
 
+            #Only grab extra info if initial search returns results
+            meta = self._get_info(tmdb_id)
             if meta is None: # fall through to IMDB lookup
                 meta = {}
             else:               
+                #Grab extra info on threads
+                Thread(target=self._get_cast, args=(tmdb_id,castQueue)).start()
+                Thread(target=self._get_trailer, args=(tmdb_id,trailerQueue)).start()
+                cast = castQueue.get()
+                trailers = trailerQueue.get()
                 
                 if meta.has_key('poster_path') and meta['poster_path']:
                     meta['cover_url'] = self.poster_prefix + meta['poster_path']
