@@ -1,4 +1,4 @@
-[B]Version 1.2.0[/B]
+[B]Version 1.3.0[/B]
 - Fixed changed watched on episodes (again)
 - Added fetch of trailers using v3 of tmdb api
 - Check if a match if found from tmdb before requesting rest of data
