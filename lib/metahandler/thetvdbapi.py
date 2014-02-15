@@ -163,8 +163,8 @@ class TheTVDB(object):
             self.airs_before_episode = node.findtext("airsbefore_episode")
 
             # Unknown
-            self.combined_episode_number = node.findtext("combined_episode_number")
-            self.combined_season = node.findtext("combined_season")
+            self.combined_episode_number = node.findtext("Combined_episodenumber")
+            self.combined_season = node.findtext("Combined_season")
             self.absolute_number = node.findtext("absolute_number")
             self.season_id = node.findtext("seasonid")
             self.ep_img_flag = node.findtext("EpImgFlag")
