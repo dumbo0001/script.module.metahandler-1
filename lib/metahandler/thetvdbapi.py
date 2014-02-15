@@ -42,7 +42,7 @@ class TheTVDB(object):
     def select_mirrors(self):
         #http://thetvdb.com/api/<apikey>/mirrors.xml
         url = "%s/mirrors.xml" % self.base_key_url
-        data = StringIO(urllib.urlopen(url).read())
+        data = urllib.urlopen(url)
         try:
             tree = ET.parse(data)
             self.xml_mirrors = []
@@ -442,12 +442,15 @@ class TheTVDB(object):
         my_callback(name, attrs) where name will be "Data", "Series", "Episode",
         or "Banner", and attrs will be a dict of the values (e.g. id, time, etc).
         """
-        e = expat_updates(callback)
+        e = ExpatParseXml(callback)
         fh = self.get_update_filehandle(period)
         if fh:
-            e.parse(fh)
+            try:
+                e.parse(fh)
+            except SyntaxError:
+                pass
 
-class expat_updates(object):
+class ExpatParseXml(object):
     def __init__(self, callback):
         self.el_name = None
         self.el_attr_name = None
