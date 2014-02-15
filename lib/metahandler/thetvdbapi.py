@@ -343,12 +343,15 @@ class TheTVDB(object):
     def get_update_filehandle(self, period):
         url = "%s/updates/updates_%s.zip" % (self.base_key_url, period)
         data = urllib.urlopen(url)
+        fh = None
         try:
             zipfile = ZipFile(StringIO(data.read()))
             want_name = 'updates_%s.xml' % period
-            return zipfile.open(want_name)
+            fh = zipfile.open(want_name)
         except:
-            return None
+            pass
+
+        return fh
 
     def get_updated_shows(self, period = "day"):
         """Get a list of show ids which have been updated within this period."""
@@ -405,7 +408,8 @@ class TheTVDB(object):
         """
         e = expat_updates(callback)
         fh = self.get_update_filehandle(period)
-        e.parse(fh)
+        if fh:
+            e.parse(fh)
 
 class expat_updates(object):
     def __init__(self, callback):
