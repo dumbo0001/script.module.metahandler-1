@@ -201,12 +201,11 @@ class TheTVDB(object):
         url = "%s/GetSeries.php?%s" % (self.base_url, get_args)
         data = urllib.urlopen(url)
         show_list = []
-        if data:
-            try:
-                tree = ET.parse(data)
-                show_list = [(show.findtext("seriesid"), show.findtext("SeriesName"),show.findtext("IMDB_ID")) for show in tree.getiterator("Series")]
-            except SyntaxError:
-                pass
+        try:
+            tree = ET.parse(data)
+            show_list = [(show.findtext("seriesid"), show.findtext("SeriesName"),show.findtext("IMDB_ID")) for show in tree.getiterator("Series")]
+        except SyntaxError:
+            pass
 
         return show_list
 
