@@ -40,6 +40,7 @@ class TheTVDB(object):
 
         self.select_mirrors()
 
+
     def select_mirrors(self):
         #http://thetvdb.com/api/<apikey>/mirrors.xml
         url = "%s/mirrors.xml" % self.base_key_url
@@ -116,12 +117,14 @@ class TheTVDB(object):
             self.zap2it_id = node.get("zap2it_id", "")
 
             # When this show was last updated
-            self.last_updated_utime = int(node.get("lastupdated", ""))
+            self.last_updated_utime = int(TheTVDB.check(node.get("lastupdated", ""), '0'))
             self.last_updated = datetime.datetime.fromtimestamp(self.last_updated_utime)
+
 
         def __str__(self):
             import pprint
             return pprint.saferepr(self)
+
 
     class Episode(object):
         """A python object representing a thetvdb.com episode record."""
@@ -172,20 +175,24 @@ class TheTVDB(object):
             self.imdb_id = node.get("IMDB_ID", "")
 
             # When this episode was last updated
-            self.last_updated_utime = int(self.check(node.get("lastupdated", ""), '0'))
+            self.last_updated_utime = int(TheTVDB.check(node.get("lastupdated", ""), '0'))
             self.last_updated = datetime.datetime.fromtimestamp(self.last_updated_utime)
+
 
         def __str__(self):
             return repr(self)
 
-        def check(self, value, ret=None):
-            if value is None or value == '':
-                if ret == None:
-                    return ''
-                else:
-                    return ret
+
+    @staticmethod
+    def check(value, ret=None):
+        if value is None or value == '':
+            if ret == None:
+                return ''
             else:
-                return value
+                return ret
+        else:
+            return value
+
 
     @staticmethod
     def convert_time(time_string):
@@ -219,6 +226,7 @@ class TheTVDB(object):
 
         return None
 
+
     @staticmethod
     def convert_date(date_string):
         """Convert a thetvdb date string into a datetime.date object."""
@@ -229,6 +237,7 @@ class TheTVDB(object):
             pass
 
         return first_aired
+
 
     def get_matching_shows(self, show_name):
         """Get a list of shows matching show_name."""
@@ -243,6 +252,7 @@ class TheTVDB(object):
             pass
 
         return show_list
+
 
     def get_show(self, show_id):
         """Get the show object matching this show_id."""
@@ -271,6 +281,7 @@ class TheTVDB(object):
 
         return tvdb_id
 
+
     def get_episode(self, episode_id):
         """Get the episode object matching this episode_id."""
         url = "%s/episodes/%s" % (self.base_xml_url, episode_id)
@@ -282,7 +293,6 @@ class TheTVDB(object):
         """Get the episode object matching this episode_id."""
         #url = "%s/series/%s/default/%s/%s" % (self.base_key_url, show_id, season_num, ep_num)
         '''http://www.thetvdb.com/api/GetEpisodeByAirDate.php?apikey=1D62F2F90030C444&seriesid=71256&airdate=2010-03-29'''
-
         url = "%s/GetEpisodeByAirDate.php?apikey=1D62F2F90030C444&seriesid=%s&airdate=%s" % (self.base_url, show_id, aired)
         show, eps = self.get_show_and_or_eps(url)
         return eps[0] if eps else None
@@ -301,6 +311,7 @@ class TheTVDB(object):
         zip_name = '%s.xml' % self.language
         show, eps = self.get_show_and_or_eps(url, zip_name, atleast)
         return (show, eps) if show else None
+
 
     def get_show_and_or_eps(self, url, zip_name = None, atleast = 1):
         data = urllib.urlopen(url)
@@ -324,12 +335,14 @@ class TheTVDB(object):
         self.show_tmp = self.episodes_tmp = None
         return show_and_episodes
 
+
     def show_and_ep_callback(self, name, attrs):
         if name == 'Episode':
             if int(attrs['id']) >= self.epid_atleast:
                 self.episodes_tmp.append(TheTVDB.Episode(attrs, self.mirror_url))
         elif name == 'Series':
             self.show_tmp = TheTVDB.Show(attrs, self.mirror_url)
+
 
     def get_update_filehandle(self, period):
         url = "%s/updates/updates_%s.zip" % (self.base_zip_url, period)
@@ -344,6 +357,7 @@ class TheTVDB(object):
 
         return fh
 
+
     def get_updated_shows(self, period = "day"):
         """Get a list of show ids which have been updated within this period."""
         fh = self.get_update_filehandle(period)
@@ -356,6 +370,7 @@ class TheTVDB(object):
 
         return [x.findtext("id") for x in series_nodes]
 
+
     def get_updated_episodes(self, period = "day"):
         """Get a list of episode ids which have been updated within this period."""
         fh = self.get_update_filehandle(period)
@@ -366,6 +381,7 @@ class TheTVDB(object):
         episode_nodes = tree.getiterator("Episode")
 
         return [(x.findtext("Series"), x.findtext("id")) for x in episode_nodes]
+
 
     def get_show_image_choices(self, show_id):
         """Get a list of image urls and types relating to this show."""
@@ -390,6 +406,7 @@ class TheTVDB(object):
 
         return images
 
+
     def get_updates(self, callback, period = "day"):
         """Return all series, episode, and banner updates w/o having to have it
         all in memory at once.  Also returns the Data timestamp and avoids the
@@ -404,6 +421,7 @@ class TheTVDB(object):
                 e.parse(fh)
             except expat.ExpatError:
                 pass
+
 
 class ExpatParseXml(object):
     def __init__(self, callback):
