@@ -443,4 +443,7 @@ class ExpatParseXml(object):
 
     def char_data(self, data):
         if self.el_attr_name:
-            self.el_attrs[self.el_attr_name] = data
+            if self.el_attrs.has_key(self.el_attr_name):
+                self.el_attrs[self.el_attr_name] += data
+            else:
+                self.el_attrs[self.el_attr_name] = data
