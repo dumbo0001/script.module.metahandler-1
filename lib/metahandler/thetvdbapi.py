@@ -43,11 +43,10 @@ class TheTVDB(object):
     def select_mirrors(self):
         #http://thetvdb.com/api/<apikey>/mirrors.xml
         url = "%s/mirrors.xml" % self.base_key_url
-        data = urllib.urlopen(url)
+        self.xml_mirrors = []
+        self.zip_mirrors = []
         try:
-            tree = ET.parse(data)
-            self.xml_mirrors = []
-            self.zip_mirrors = []
+            tree = ET.parse(urllib.urlopen(url))
             for mirror in tree.getiterator("Mirror"):
                 mirrorpath = mirror.findtext("mirrorpath")
                 typemask = mirror.findtext("typemask")
@@ -58,8 +57,8 @@ class TheTVDB(object):
                     self.xml_mirrors.append(mirrorpath)
                 if typemask & 4:
                     self.zip_mirrors.append(mirrorpath)
-        except SyntaxError:
-            self.xml_mirrors = self.zip_mirrors = []
+        except:
+            pass
 
         if not self.xml_mirrors:
             self.xml_mirrors = [ self.mirror_url ]
