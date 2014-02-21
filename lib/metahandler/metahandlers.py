@@ -1663,7 +1663,7 @@ class MetaData:
         elif not new_tvdb_id:
             new_tvdb_id = tvdb_id
             
-        return self.get_episode_meta(name, imdb_id, season, episode, overlay)
+        return self.get_episode_meta(name, imdb_id, season, episode, overlay=overlay)
 
 
     def _cache_lookup_episode(self, imdb_id, tvdb_id, season, episode, air_date=''):
