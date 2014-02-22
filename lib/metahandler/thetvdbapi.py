@@ -28,13 +28,14 @@ from cStringIO import StringIO
 from zipfile import ZipFile
 
 class TheTVDB(object):
-    def __init__(self, api_key='2B8557E0CBF7D720', language = 'en'):
+    def __init__(self, api_key='2B8557E0CBF7D720', language = 'en', want_raw = False):
         #http://thetvdb.com/api/<apikey>/<request>
         self.api_key = api_key
         self.mirror_url = "http://thetvdb.com"
         self.base_url =  self.mirror_url + "/api"
         self.base_key_url = "%s/%s" % (self.base_url, self.api_key)
         self.language = language
+        self.want_raw = want_raw
 
         # This is always returning thetvdb.com, so tell it to fudge the results for now.
         self.select_mirrors(False)
@@ -71,6 +72,14 @@ class TheTVDB(object):
 
         self.base_xml_url = "%s/api/%s" % (self.xml_mirror_url, self.api_key)
         self.base_zip_url = "%s/api/%s" % (self.zip_mirror_url, self.api_key)
+
+
+    def _2show(self, attrs):
+        return attrs if self.want_raw else TheTVDB.Show(attrs, self.mirror_url)
+
+
+    def _2episode(self, attrs):
+        return attrs if self.want_raw else TheTVDB.Episode(attrs, self.mirror_url)
 
 
     class Show(object):
@@ -259,11 +268,13 @@ class TheTVDB(object):
         #url = "%s/series/%s/%s.xml" % (self.base_key_url, show_id, "el")
         url = "%s/GetSeriesByRemoteID.php?imdbid=%s" % (self.base_url, imdb_id)
         show = self._get_show_by_url(url)
-        return show.id if show else ''
+        if show:
+            return show['id'] if self.want_raw else show.id
+        return ''
 
 
     def _get_show_by_url(self, url):
-        filt_func = lambda name, attrs: TheTVDB.Show(attrs, self.mirror_url) if name == "Series" else None
+        filt_func = lambda name, attrs: self._2show(attrs) if name == "Series" else None
         xml = self._get_xml_data(url, filt_func)
         return xml['Series'][0] if 'Series' in xml else None
 
@@ -289,7 +300,7 @@ class TheTVDB(object):
 
 
     def _get_episode_by_url(self, url):
-        filt_func = lambda name, attrs: TheTVDB.Episode(attrs, self.mirror_url) if name == "Episode" else None
+        filt_func = lambda name, attrs: self._2episode(attrs) if name == "Episode" else None
         xml = self._get_xml_data(url, filt_func)
         return xml['Episode'][0] if 'Episode' in xml else None
 
@@ -298,7 +309,7 @@ class TheTVDB(object):
         """Get the show object and all matching episode objects for this show_id."""
         url = "%s/series/%s/all/%s.zip" % (self.base_zip_url, show_id, self.language)
         zip_name = '%s.xml' % self.language
-        filt_func = lambda name, attrs: TheTVDB.Episode(attrs, self.mirror_url) if name == "Episode" and int(attrs["id"]) >= atleast else TheTVDB.Show(attrs, self.mirror_url) if name == "Series" else None
+        filt_func = lambda name, attrs: self._2episode(attrs) if name == "Episode" and int(attrs["id"]) >= atleast else self._2show(attrs) if name == "Series" else None
         xml = self._get_xml_data(url, filt_func, zip_name=zip_name)
         if 'Series' not in xml:
             return None
