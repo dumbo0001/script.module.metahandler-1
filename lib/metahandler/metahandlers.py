@@ -1270,7 +1270,7 @@ class MetaData:
             these "None found" entries otherwise we hit tvdb alot.
         '''      
         common.addon.log('Starting TVDB Lookup', 0)
-        tvdb = TheTVDB()
+        tvdb = TheTVDB(language=self._get_tvdb_language())
         tvdb_id = ''
         
         try:
@@ -1615,7 +1615,14 @@ class MetaData:
         else:
             return None
 
-
+    def _get_tvdb_language(self) :
+        tvdb_language = common.addon.get_setting('tvdb_language')
+        if tvdb_language and tvdb_language!='':
+            return re.sub(".*\((\w+)\).*","\\1",tvdb_language)
+        else:
+            return 'en'
+    
+    
     def update_episode_meta(self, name, imdb_id, season, episode, tvdb_id='', new_imdb_id='', new_tvdb_id=''):
         '''
         Updates and returns meta data for given episode, 
@@ -1777,7 +1784,7 @@ class MetaData:
         '''      
         
         meta = {}
-        tvdb = TheTVDB()
+        tvdb = TheTVDB(language=self._get_tvdb_language())
         if air_date:
             try:
                 episode = tvdb.get_episode_by_airdate(tvdb_id, air_date)
@@ -2246,7 +2253,7 @@ class MetaData:
 
 
     def _get_season_posters(self, tvdb_id, season):
-        tvdb = TheTVDB()
+        tvdb = TheTVDB(language=self._get_tvdb_language())
         
         try:
             images = tvdb.get_show_image_choices(tvdb_id)
