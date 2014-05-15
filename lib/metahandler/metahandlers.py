@@ -147,7 +147,7 @@ class MetaData:
             db_user = common.addon.get_setting('db_user')
             db_pass = common.addon.get_setting('db_pass')
             db_name = common.addon.get_setting('db_name')
-            self.dbcon = database.connect(db_name, db_user, db_pass, db_address, buffered=True)
+            self.dbcon = database.connect(database=db_name, user=db_user, password=db_pass, host=db_address, buffered=True)
             self.dbcur = self.dbcon.cursor(cursor_class=MySQLCursorDict, buffered=True)
         else:
             self.dbcon = database.connect(self.videocache)
