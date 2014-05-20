@@ -190,6 +190,7 @@ class MetaData:
                 
         except Exception, e:
             common.addon.log('************* Error updating cover and backdrop columns: %s' % e, 4)
+            pass
         
         ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
