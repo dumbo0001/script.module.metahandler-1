@@ -167,7 +167,6 @@ class MetaData:
         try:
 
             if DB == 'mysql':
-                print 'mysql'
                 sql_select = "SELECT imdb_id, tmdb_id, cover_url, backdrop_url FROM movie_meta where substring(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' or substring(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
                 self.dbcur.execute(sql_select)
                 matchedrows = self.dbcur.fetchall()[0]
@@ -175,7 +174,10 @@ class MetaData:
                 if matchedrows:
                     sql_update = "UPDATE movie_meta SET cover_url = SUBSTRING_INDEX(cover_url, '/', -1), backdrop_url = SUBSTRING_INDEX(backdrop_url, '/', -1)"
                     self.dbcur.execute(sql_update)
-                    self.dbcon.commit()                    
+                    self.dbcon.commit()
+                    common.addon.log('MySQL rows successfully updated')
+                else:
+                    common.addon.log('No MySQL rows requiring update')
                 
             else:
           
@@ -187,6 +189,9 @@ class MetaData:
                     sql_update = "update movie_meta set cover_url = case when substr(cover_url, length(cover_url) - 31, 1) = '/' then substr(cover_url, length(cover_url) - 31, 32) else substr(cover_url, length(cover_url) - 30, 31) end, backdrop_url = case when substr(backdrop_url, length(backdrop_url) - 31, 1) = '/' then substr(backdrop_url, length(backdrop_url) - 31, 32) else substr(backdrop_url, length(backdrop_url) - 30, 31) end where substr(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' or substr(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
                     self.dbcur.execute(sql_update)
                     self.dbcon.commit()
+                    common.addon.log('SQLite rows successfully updated')
+                else:
+                    common.addon.log('No SQLite rows requiring update')
                 
         except Exception, e:
             common.addon.log('************* Error updating cover and backdrop columns: %s' % e, 4)
