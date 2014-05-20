@@ -95,15 +95,19 @@ class MetaData:
     '''  
 
      
-    def __init__(self, preparezip=False):
+    def __init__(self, preparezip=False, tmdb_api_key='af95ef8a4fe1e697f86b8c194f2e5e11'):
 
         #Check if a path has been set in the addon settings
         settings_path = common.addon.get_setting('meta_folder_location')
         
+        # TMDB constants
+        self.tmdb_image_url = 'http://image.tmdb.org/t/p/'
+        self.tmdb_api_key = tmdb_api_key
+               
         if settings_path:
             self.path = xbmc.translatePath(settings_path)
         else:
-            self.path = xbmc.translatePath('special://profile/addon_data/script.module.metahandler')
+            self.path = common.profile_path();
         
         self.cache_path = make_dir(self.path, 'meta_cache')
 
@@ -157,6 +161,45 @@ class MetaData:
         # initialize cache db
         self._cache_create_movie_db()
 
+        ## !!!!!!!!!!!!!!!!!! Temporary code to update movie_meta columns cover_url and backdrop_url to store only filename !!!!!!!!!!!!!!!!!!!!!
+ 
+        ## We have matches with outdated url, so lets strip the url out and only keep filename 
+        try:
+
+            if DB == 'mysql':
+                print 'mysql'
+                sql_select = "SELECT imdb_id, tmdb_id, cover_url, backdrop_url FROM movie_meta where substring(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' or substring(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
+                self.dbcur.execute(sql_select)
+                matchedrows = self.dbcur.fetchall()[0]
+                
+                if matchedrows:
+                    sql_update = "UPDATE movie_meta SET cover_url = SUBSTRING_INDEX(cover_url, '/', -1), backdrop_url = SUBSTRING_INDEX(backdrop_url, '/', -1)"
+                    self.dbcur.execute(sql_update)
+                    self.dbcon.commit()                    
+                
+            else:
+          
+                ## Too difficult to do in SQLite with an UPDATE statement (no char index command or joins on updates) so lets do it the tedious way with python    
+                
+                sql_select = "SELECT imdb_id, tmdb_id, cover_url, backdrop_url FROM movie_meta where substr(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' or substr(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
+                self.dbcur.execute(sql_select)
+                matchedrows = self.dbcur.fetchall()
+
+                if matchedrows:
+                    dictrows = [dict(row) for row in matchedrows]
+                    for row in dictrows:
+                        row["cover_url"] = row["cover_url"].split('/')[-1]
+                        row["backdrop_url"] = row["backdrop_url"].split('/')[-1]
+                
+                ## TO-DO - need to work out how to batch update in sqlite
+                ##sql_update = ('UPDATE movie_meta SET cover_url = ?, backdrop_url = ? WHERE imdb_id = ? and tmdb_id =?')
+                ##self.dbcur.execute(sql_update,dictrows)
+                ##self.dbcon.commit()
+                
+        except Exception, e:
+            common.addon.log('************* Error: %s' % e, 4)
+        
+        ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     def __del__(self):
         ''' Cleanup db when object destroyed '''
@@ -444,6 +487,22 @@ class MetaData:
         return meta
         
 
+    def __get_tmdb_language(self):
+        tmdb_language = common.addon.get_setting('tmdb_language')
+        if tmdb_language:
+            return re.sub(".*\((\w+)\).*","\\1",tmdb_language)
+        else:
+            return 'en'
+
+            
+    def __get_tvdb_language(self) :
+        tvdb_language = common.addon.get_setting('tvdb_language')
+        if tvdb_language and tvdb_language!='':
+            return re.sub(".*\((\w+)\).*","\\1",tvdb_language)
+        else:
+            return 'en'
+
+            
     def _string_compare(self, s1, s2):
         """ Method that takes two strings and returns True or False, based
             on if they are equal, regardless of case.
@@ -830,7 +889,12 @@ class MetaData:
                         banner_path=os.path.join(root_banners, banner_name[0].lower())
                         if self.classmode == 'true':
                             self._downloadimages(meta['banner_url'], banner_path, banner_name)
-                        meta['banner_url'] = os.path.join(banner_path, banner_name)        
+                        meta['banner_url'] = os.path.join(banner_path, banner_name)
+
+        #Else - they are online so piece together the full URL from TMDB 
+        else:
+            meta['cover_url'] = self.tmdb_image_url  + common.addon.get_setting('tmdb_poster_size') + meta['cover_url']
+            meta['backdrop_url'] = self.tmdb_image_url  + common.addon.get_setting('tmdb_backdrop_size') + meta['backdrop_url']
 
         common.addon.log('Returned Meta: %s' % meta, 0)
         return meta  
@@ -1129,7 +1193,7 @@ class MetaData:
             these "None found" entries otherwise we hit tmdb alot.
         '''        
         
-        tmdb = TMDB()        
+        tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
         meta = tmdb.tmdb_lookup(name,imdb_id,tmdb_id, year)
         
         if meta is None:
@@ -1270,7 +1334,7 @@ class MetaData:
             these "None found" entries otherwise we hit tvdb alot.
         '''      
         common.addon.log('Starting TVDB Lookup', 0)
-        tvdb = TheTVDB(language=self._get_tvdb_language())
+        tvdb = TheTVDB(language=self.__get_tvdb_language())
         tvdb_id = ''
         
         try:
@@ -1615,14 +1679,7 @@ class MetaData:
         else:
             return None
 
-    def _get_tvdb_language(self) :
-        tvdb_language = common.addon.get_setting('tvdb_language')
-        if tvdb_language and tvdb_language!='':
-            return re.sub(".*\((\w+)\).*","\\1",tvdb_language)
-        else:
-            return 'en'
-    
-    
+     
     def update_episode_meta(self, name, imdb_id, season, episode, tvdb_id='', new_imdb_id='', new_tvdb_id=''):
         '''
         Updates and returns meta data for given episode, 
