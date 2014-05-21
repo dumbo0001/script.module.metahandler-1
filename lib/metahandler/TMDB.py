@@ -130,7 +130,15 @@ class TMDB(object):
             except:
                 return True
 
+                
+    def call_config(self):
+        '''
+        Query TMDB config api for current values
+        '''
+        r = self._do_request('configuration', '')
+        return r        
 
+        
     def search_imdb(self, name, imdb_id='', year=''):
         '''
         Search IMDB by either IMDB ID or Name/Year      
