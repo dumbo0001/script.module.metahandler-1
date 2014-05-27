@@ -40,8 +40,6 @@ net = Net()
 
 sys.path.append((os.path.split(common.addon_path))[0])
 
-common.addon.log('Initializing MetaHandlers version: %s' % common.addon.get_version())
-
 '''
    Use SQLIte3 wherever possible, needed for newer versions of XBMC
    Keep pysqlite2 for legacy support
