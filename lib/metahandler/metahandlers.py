@@ -1546,7 +1546,7 @@ class MetaData:
 
                 if meta['plot'] == 'None' or meta['plot'] == '' or meta['plot'] == 'TBD' or meta['plot'] == 'No overview found.' or meta['rating'] == 0 or meta['duration'] == 0 or meta['cover_url'] == '':
                     common.addon.log(' Some info missing in TVdb for TVshow *** '+ name + ' ***. Will search imdb for more', 0)
-                    tmdb = TMDB()
+                    tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
                     imdb_meta = tmdb.search_imdb(name, imdb_id)
                     if imdb_meta:
                         imdb_meta = tmdb.update_imdb_meta(meta, imdb_meta)
@@ -1563,7 +1563,7 @@ class MetaData:
 
                 return meta
             else:
-                tmdb = TMDB()
+                tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
                 imdb_meta = tmdb.search_imdb(name, imdb_id)
                 if imdb_meta:
                     meta = tmdb.update_imdb_meta(meta, imdb_meta)
@@ -1588,7 +1588,7 @@ class MetaData:
         ''' 
         common.addon.log('---------------------------------------------------------------------------------------', 2)
         common.addon.log('Meta data refresh - searching for movie: %s' % name, 2)
-        tmdb = TMDB()
+        tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
         movie_list = []
         meta = tmdb.tmdb_search(name)
         if meta:
@@ -1622,7 +1622,7 @@ class MetaData:
         ''' 
         common.addon.log('---------------------------------------------------------------------------------------', 2)
         common.addon.log('TMDB - requesting similar movies: %s' % tmdb_id, 2)
-        tmdb = TMDB()
+        tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
         movie_list = []
         meta = tmdb.tmdb_similar_movies(tmdb_id, page)
         if meta:
