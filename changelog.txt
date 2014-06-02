@@ -1,5 +1,8 @@
-[B]Version 2.5.2[/B]
+[B]Version 2.6.0[/B]
 - Fixed small bug in tmdb config cache refresh logic
+- Changed location of logging addon version on init
+- Switch to use addon.common instead of t0mm0.common
+- New icon
 
 [B]Version 2.5.1[/B]
 - Fixed bug in call to TVDB class
