@@ -1,3 +1,6 @@
+[B]Version 2.5.2[/B]
+- Fixed small bug in tmdb config cache refresh logic
+
 [B]Version 2.5.1[/B]
 - Fixed bug in call to TVDB class
 
