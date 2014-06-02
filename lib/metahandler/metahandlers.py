@@ -170,8 +170,8 @@ class MetaData:
             if DB == 'mysql':
                 sql_select = "SELECT imdb_id, tmdb_id, cover_url, backdrop_url "\
                                 "FROM movie_meta "\
-                                "where substring(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
-                                "or substring(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
+                                "WHERE (substring(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
+                                "OR substring(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net')"
                 self.dbcur.execute(sql_select)
                 matchedrows = self.dbcur.fetchall()[0]
                 
@@ -190,33 +190,32 @@ class MetaData:
                 
             else:
           
-                sql_select = "SELECT imdb_id, tmdb_id, cover_url, backdrop_url "\
+                sql_select = "SELECT imdb_id, tmdb_id, cover_url, thumb_url, backdrop_url "\
                                 "FROM movie_meta "\
-                                "where substr(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
-                                "or substr(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
+                                "WHERE substr(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
+                                "OR substr(thumb_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
+                                "OR substr(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
+                                "OR substr(cover_url, 1, 1 ) in ('w', 'o') "\
+                                "OR substr(thumb_url, 1, 1 ) in ('w', 'o') "\
+                                "OR substr(backdrop_url, 1, 1 ) in ('w', 'o') "
                 self.dbcur.execute(sql_select)
-                matchedrows = self.dbcur.fetchone()
+                matchedrows = self.dbcur.fetchall()
 
                 if matchedrows:
-                    sql_update = "update movie_meta "\
-                                    "set cover_url = "\
-                                        "case when substr(cover_url, length(cover_url) - 31, 1) = '/' "\
-                                        "   then substr(cover_url, length(cover_url) - 31, 32) "\
-                                        "else substr(cover_url, length(cover_url) - 30, 31) "\
-                                        "end, "\
-                                        "backdrop_url = "\
-                                        "case when substr(backdrop_url, length(backdrop_url) - 31, 1) = '/' "\
-                                        "   then substr(backdrop_url, length(backdrop_url) - 31, 32) "\
-                                        "else substr(backdrop_url, length(backdrop_url) - 30, 31) "\
-                                        "end "\
-                                        "where substr(cover_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net' "\
-                                        "or substr(backdrop_url, 1, 36 ) = 'http://d3gtl9l2a4fn1j.cloudfront.net'"
-                    self.dbcur.execute(sql_update)
+                    dictrows = [dict(row) for row in matchedrows]
+                    for row in dictrows:
+                        row["cover_url"] = '/' + row["cover_url"].split('/')[-1]
+                        row["thumb_url"] = '/' + row["thumb_url"].split('/')[-1]
+                        row["backdrop_url"] = '/' + row["backdrop_url"].split('/')[-1]
+
+                    sql_update = "UPDATE movie_meta SET cover_url = :cover_url, thumb_url = :thumb_url, backdrop_url = :backdrop_url  WHERE imdb_id = :imdb_id and tmdb_id = :tmdb_id"
+                    
+                    self.dbcur.executemany(sql_update, dictrows)
                     self.dbcon.commit()
                     common.addon.log('SQLite rows successfully updated')
                 else:
                     common.addon.log('No SQLite rows requiring update')                    
-               
+           
         except Exception, e:
             common.addon.log('************* Error updating cover and backdrop columns: %s' % e, 4)
             pass
