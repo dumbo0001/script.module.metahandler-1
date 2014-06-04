@@ -692,7 +692,7 @@ class MetaData:
         #Query local table first for current values
         sql_select = "SELECT * FROM config where setting = '%s'" % setting
 
-        common.addon.log('Looking up in local cache for config data: %s' % setting, 2)
+        common.addon.log('Looking up in local cache for config data: %s' % setting, 0)
         common.addon.log('SQL Select: %s' % sql_select, 0)        
 
         try:    
@@ -735,7 +735,8 @@ class MetaData:
         Query config database for required TMDB config values, set constants as needed
         Validate cache timestamp to ensure it is only refreshed once every 7 days
         '''
-    
+
+        common.addon.log('Looking up TMDB config cache values', 2)        
         tmdb_image_url = self._get_config('tmdb_image_url')
         tmdb_config_timestamp = self._get_config('tmdb_config_timestamp')
         
@@ -743,22 +744,26 @@ class MetaData:
         now = time.time()
         age = 0
 
-        #Cache limit is 7 days: 60 seconds * 60 minutes * 24 hours * 7 days
+        #Cache limit is 7 days, value needs to be in seconds: 60 seconds * 60 minutes * 24 hours * 7 days
         expire = 60 * 60 * 24 * 7
               
         #Check if image and timestamp values are valid
         if tmdb_image_url and tmdb_config_timestamp:
             created = float(tmdb_config_timestamp)
             age = now - created
+            common.addon.log('Cache age: %s , Expire: %s' % (age, expire), 0)
             
             #If cache hasn't expired, set constant values
-            if age < expire:
-                common.addon.log('Cache still valid, setting values', 0)
+            if age <= float(expire):
+                common.addon.log('Cache still valid, setting values', 2)
+                common.addon.log('Setting tmdb_image_url: %s' % tmdb_image_url, 0)
                 self.tmdb_image_url = tmdb_image_url
+            else:
+                common.addon.log('Cache is too old, need to request new values', 2)
         
         #Either we don't have the values or the cache has expired, so lets request and set them - update cache in the end
         if (not tmdb_image_url or not tmdb_config_timestamp) or age > expire:
-            common.addon.log('No cached config data found or cache expired, requesting from TMDB', 0)
+            common.addon.log('No cached config data found or cache expired, requesting from TMDB', 2)
 
             tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
             config_data = tmdb.call_config()
