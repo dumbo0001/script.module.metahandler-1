@@ -2,7 +2,8 @@
 - Fixed small bug in tmdb config cache refresh logic
 - Changed location of logging addon version on init
 - Switch to use addon.common instead of t0mm0.common
-- New icon
+- Changed logic to upgrade tmdb image url's for sqlite db's, should be more accurate now
+- New addon icon
 
 [B]Version 2.5.1[/B]
 - Fixed bug in call to TVDB class
