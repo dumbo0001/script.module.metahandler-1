@@ -265,6 +265,15 @@ class MetaData:
             sql_create = sql_create.replace("imdb_id TEXT","imdb_id VARCHAR(10)")
             sql_create = sql_create.replace("tmdb_id TEXT","tmdb_id VARCHAR(10)")
             sql_create = sql_create.replace("title TEXT"  ,"title VARCHAR(255)")
+
+            # hack to bypass bug in myconnpy
+            # create table if not exists fails bc a warning about the table
+            # already existing bubbles up as an exception. This suppresses the
+            # warning which would just be logged anyway.
+            # http://stackoverflow.com/questions/1650946/mysql-create-table-if-not-exists-error-1050
+            sql_hack = "SET sql_notes = 0;"
+            self.dbcur.execute(sql_hack)
+            
             self.dbcur.execute(sql_create)
             try: self.dbcur.execute('CREATE INDEX nameindex on movie_meta (title);')
             except: pass
