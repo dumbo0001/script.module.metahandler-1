@@ -1038,14 +1038,16 @@ class MetaData:
             #Else - they are online so piece together the full URL from TMDB 
             else:
                 if media_type == self.type_movie:
-                    if meta['cover_url'] and len(meta['cover_url']) > 1 and not meta['cover_url'].startswith('http'):
-                        meta['cover_url'] = self.tmdb_image_url  + common.addon.get_setting('tmdb_poster_size') + meta['cover_url']
-                    # else:
-                    #     meta['cover_url'] = ''
-                    if meta['backdrop_url'] and len(meta['backdrop_url']) > 1 and not meta['backdrop_url'].startswith('http'):
-                        meta['backdrop_url'] = self.tmdb_image_url  + common.addon.get_setting('tmdb_backdrop_size') + meta['backdrop_url']
-                    # else:
-                    #     meta['backdrop_url'] = ''
+                    if meta['cover_url'] and len(meta['cover_url']) > 1:
+                        if not meta['cover_url'].startswith('http'):
+                            meta['cover_url'] = self.tmdb_image_url  + common.addon.get_setting('tmdb_poster_size') + meta['cover_url']
+                    else:
+                        meta['cover_url'] = ''
+                    if meta['backdrop_url'] and len(meta['backdrop_url']) > 1:
+                        if not meta['backdrop_url'].startswith('http'):
+                            meta['backdrop_url'] = self.tmdb_image_url  + common.addon.get_setting('tmdb_backdrop_size') + meta['backdrop_url']
+                    else:
+                        meta['backdrop_url'] = ''
     
             common.addon.log('Returned Meta: %s' % meta, 0)
             return meta  
