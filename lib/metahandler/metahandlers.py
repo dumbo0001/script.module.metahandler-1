@@ -902,7 +902,7 @@ class MetaData:
             return
                     
 
-    def get_meta(self, media_type, name, imdb_id='', tmdb_id='', year='', overlay=6):
+    def get_meta(self, media_type, name, imdb_id='', tmdb_id='', year='', overlay=6, update=False):
         '''
         Main method to get meta data for movie or tvshow. Will lookup by name/year 
         if no IMDB ID supplied.       
@@ -927,12 +927,15 @@ class MetaData:
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
 
-        if imdb_id:
-            meta = self._cache_lookup_by_id(media_type, imdb_id=imdb_id)
-        elif tmdb_id:
-            meta = self._cache_lookup_by_id(media_type, tmdb_id=tmdb_id)
+        if not update:
+            if imdb_id:
+                meta = self._cache_lookup_by_id(media_type, imdb_id=imdb_id)
+            elif tmdb_id:
+                meta = self._cache_lookup_by_id(media_type, tmdb_id=tmdb_id)
+            else:
+                meta = self._cache_lookup_by_name(media_type, name, year)
         else:
-            meta = self._cache_lookup_by_name(media_type, name, year)
+            meta = {}
 
         if not meta:
             
@@ -1106,7 +1109,7 @@ class MetaData:
         elif not new_tmdb_id:
             new_tmdb_id = tmdb_id
             
-        return self.get_meta(media_type, name, new_imdb_id, new_tmdb_id, year, overlay)
+        return self.get_meta(media_type, name, new_imdb_id, new_tmdb_id, year, overlay, True)
 
 
     def _cache_lookup_by_id(self, media_type, imdb_id='', tmdb_id=''):
