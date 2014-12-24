@@ -76,7 +76,7 @@ def make_dir(mypath, dirname):
 
 
 def bool2string(myinput):
-    ''' Neatens up usage of preparezip flag. '''
+    ''' Neatens up usage of prepack_images flag. '''
     if myinput is False: return 'false'
     elif myinput is True: return 'true'
 
@@ -93,7 +93,7 @@ class MetaData:
     '''  
 
      
-    def __init__(self, preparezip=False, tmdb_api_key='af95ef8a4fe1e697f86b8c194f2e5e11'):
+    def __init__(self, prepack_images=False, preparezip=False, tmdb_api_key='af95ef8a4fe1e697f86b8c194f2e5e11'):
 
         #Check if a path has been set in the addon settings
         settings_path = common.addon.get_setting('meta_folder_location')
@@ -109,7 +109,7 @@ class MetaData:
         
         self.cache_path = make_dir(self.path, 'meta_cache')
 
-        if preparezip:
+        if prepack_images:
             #create container working directory
             #!!!!!Must be matched to workdir in metacontainers.py create_container()
             self.work_path = make_dir(self.path, 'work')
@@ -123,7 +123,7 @@ class MetaData:
         #this init auto-constructs necessary folder hierarchies.
 
         # control whether class is being used to prepare pre-packaged .zip
-        self.classmode = bool2string(preparezip)
+        self.classmode = bool2string(prepack_images)
         self.videocache = os.path.join(self.cache_path, 'video_cache.db')
 
         self.tvpath = make_dir(self.cache_path, self.type_tvshow)
@@ -1200,10 +1200,8 @@ class MetaData:
                 sql_select = sql_select.replace("ISNULL", "IS NULL")
         common.addon.log('Looking up in local cache by name for: %s %s %s' % (media_type, name, year), 0)
         
-        # movie_meta doesn't have a year column
-        if common.addon.get_setting('year_lock')=='true':
-            if year and media_type == self.type_movie:
-                sql_select = sql_select + " AND year = %s" % year
+        if year and (media_type == self.type_movie or media_type == self.type_tvshow):
+            sql_select = sql_select + " AND year = %s" % year
         common.addon.log('SQL Select: %s' % sql_select, 0)
         
         try:
