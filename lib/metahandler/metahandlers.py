@@ -123,7 +123,7 @@ class MetaData:
         #this init auto-constructs necessary folder hierarchies.
 
         # control whether class is being used to prepare pre-packaged .zip
-        self.classmode = bool2string(prepack_images)
+        self.prepack_images = bool2string(prepack_images)
         self.videocache = os.path.join(self.cache_path, 'video_cache.db')
 
         self.tvpath = make_dir(self.cache_path, self.type_tvshow)
@@ -439,7 +439,7 @@ class MetaData:
         meta['studio'] = ''
         
         #set whether that database row will be accompanied by pre-packed images.                        
-        meta['imgs_prepacked'] = self.classmode
+        meta['imgs_prepacked'] = self.prepack_images
         
         meta['thumb_url'] = ''
         meta['cover_url'] = ''
@@ -487,7 +487,7 @@ class MetaData:
         meta['banner_url'] = ''
         
         #set whether that database row will be accompanied by pre-packed images.
-        meta['imgs_prepacked'] = self.classmode
+        meta['imgs_prepacked'] = self.prepack_images
         
         meta['cover_url'] = ''
         meta['backdrop_url'] = ''
@@ -602,7 +602,7 @@ class MetaData:
         '''                 
 
         if not xbmcvfs.exists(path):
-            make_dir(path)
+            make_dir('', path)
         
         full_path = os.path.join(path, name)
         self._dl_code(url, full_path)              
@@ -922,7 +922,7 @@ class MetaData:
         '''
        
         common.addon.log('---------------------------------------------------------------------------------------', 2)
-        common.addon.log('Attempting to retreive meta data for %s: %s %s %s %s' % (media_type, name, year, imdb_id, tmdb_id), 2)
+        common.addon.log('Attempting to retrieve meta data for %s: %s %s %s %s' % (media_type, name, year, imdb_id, tmdb_id), 2)
  
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
@@ -1014,7 +1014,7 @@ class MetaData:
                         cover_name = self._picname(meta['cover_url'])
                         if cover_name:
                             cover_path = os.path.join(root_covers, cover_name[0].lower())
-                            if self.classmode == 'true':
+                            if self.prepack_images == 'true':
                                 self._downloadimages(meta['cover_url'], cover_path, cover_name)
                             meta['cover_url'] = os.path.join(cover_path, cover_name)
                     
@@ -1022,7 +1022,7 @@ class MetaData:
                         backdrop_name = self._picname(meta['backdrop_url'])
                         if backdrop_name:
                             backdrop_path=os.path.join(root_backdrops, backdrop_name[0].lower())
-                            if self.classmode == 'true':
+                            if self.prepack_images == 'true':
                                 self._downloadimages(meta['backdrop_url'], backdrop_path, backdrop_name)
                             meta['backdrop_url'] = os.path.join(backdrop_path, backdrop_name)
     
@@ -1031,7 +1031,7 @@ class MetaData:
                             banner_name = self._picname(meta['banner_url'])
                             if banner_name:
                                 banner_path=os.path.join(root_banners, banner_name[0].lower())
-                                if self.classmode == 'true':
+                                if self.prepack_images == 'true':
                                     self._downloadimages(meta['banner_url'], banner_path, banner_name)
                                 meta['banner_url'] = os.path.join(banner_path, banner_name)
     
@@ -1566,7 +1566,7 @@ class MetaData:
                     for actor in show.actors:
                         meta['cast'].append(actor)
                 meta['banner_url'] = show.banner_url
-                meta['imgs_prepacked'] = self.classmode
+                meta['imgs_prepacked'] = self.prepack_images
                 meta['cover_url'] = show.poster_url
                 meta['backdrop_url'] = show.fanart_url
                 meta['overlay'] = 6
@@ -1686,7 +1686,7 @@ class MetaData:
         '''  
               
         common.addon.log('---------------------------------------------------------------------------------------', 2)
-        common.addon.log('Attempting to retreive episode meta data for: imdbid: %s season: %s episode: %s air_date: %s' % (imdb_id, season, episode, air_date), 2)
+        common.addon.log('Attempting to retrieve episode meta data for: imdbid: %s season: %s episode: %s air_date: %s' % (imdb_id, season, episode, air_date), 2)
                
         if not season:
             season = 0
