@@ -51,7 +51,7 @@ try:
         common.addon.get_setting('db_pass') is not None and     \
         common.addon.get_setting('db_name') is not None:
         import mysql.connector as database
-        common.addon.log('Loading MySQLdb as DB engine', 2)
+        common.addon.log('Loading MySQLdb as DB engine version: %s' % database.version.VERSION_TEXT, 2)
         DB = 'mysql'
     else:
         raise ValueError('MySQL not enabled or not setup correctly')
@@ -2063,14 +2063,14 @@ class MetaData:
                         
         '''      
         if meta['imdb_id']:
-            sql_select = 'SELECT * FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['premiered'])
-            sql_delete = 'DELETE FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['premiered'])
+            sql_select = 'SELECT * FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s" AND episode_id = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['premiered'], meta['episode_id'])
+            sql_delete = 'DELETE FROM episode_meta WHERE imdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s" AND episode_id = "%s"'  % (meta['imdb_id'], meta['season'], meta['episode'], meta['premiered'], meta['episode_id'])
         elif meta['tvdb_id']:
-            sql_select = 'SELECT * FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['premiered'])
-            sql_delete = 'DELETE FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['premiered'])
+            sql_select = 'SELECT * FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s" AND episode_id = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['premiered'], meta['episode_id'])
+            sql_delete = 'DELETE FROM episode_meta WHERE tvdb_id = "%s" AND season = %s AND episode = %s AND premiered = "%s" AND episode_id = "%s"'  % (meta['tvdb_id'], meta['season'], meta['episode'], meta['premiered'], meta['episode_id'])
         else:         
-            sql_select = 'SELECT * FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s AND premiered = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['premiered'])
-            sql_delete = 'DELETE FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s AND premiered = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['premiered'])
+            sql_select = 'SELECT * FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s AND premiered = "%s" AND episode_id = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['premiered'], meta['episode_id'])
+            sql_delete = 'DELETE FROM episode_meta WHERE title = "%s" AND season = %s AND episode = %s AND premiered = "%s" AND episode_id = "%s"'  % (self._clean_string(meta['title'].lower()), meta['season'], meta['episode'], meta['premiered'], meta['episode_id'])
         common.addon.log('Saving Episode Meta', 0)
         common.addon.log('SQL Select: %s' % sql_select, 0)
         
