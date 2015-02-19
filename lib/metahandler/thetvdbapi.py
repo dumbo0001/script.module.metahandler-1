@@ -256,6 +256,8 @@ class TheTVDB(object):
         get_args = {"seriesname": show_name}
         if language is not None:
             get_args['language'] = language
+        else:
+            get_args['language'] = self.language
         get_args = urllib.urlencode(get_args, doseq=True)
         url = "%s/GetSeries.php?%s" % (self.base_url, get_args)
         if want_raw:
