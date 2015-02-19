@@ -1323,6 +1323,7 @@ class MetaData:
         common.addon.log('SQL DELETE: %s' % sql_delete, 0)
         try:
             self.dbcur.execute(sql_delete)
+            self.dbcon.commit()
         except Exception, e:
             common.addon.log('************* Error attempting to delete from cache table: %s ' % e, 4)
             pass    
@@ -1972,6 +1973,7 @@ class MetaData:
         common.addon.log('SQL DELETE: %s' % sql_delete, 0)
         try:
             self.dbcur.execute(sql_delete)
+            self.dbcon.commit()
         except Exception, e:
             common.addon.log('************* Error attempting to delete from episode cache table: %s ' % e, 4)
             pass
@@ -2562,6 +2564,7 @@ class MetaData:
         common.addon.log('SQL DELETE: %s' % sql_delete, 0)
         try:
             self.dbcur.execute(sql_delete)
+            self.dbcon.commit()
         except Exception, e:
             common.addon.log('************* Error attempting to delete from season cache table: %s ' % e, 4)
             pass
