@@ -62,12 +62,12 @@ class MetaContainer:
         else:
             self.path = xbmc.translatePath('special://profile/addon_data/script.module.metahandler')
 
-        self.work_path = os.path.join(self.path, 'work\\')
-        self.cache_path = os.path.join(self.path,  'meta_cache\\')
+        self.work_path = os.path.join(self.path, 'work', '')
+        self.cache_path = os.path.join(self.path,  'meta_cache')
         self.videocache = os.path.join(self.cache_path, 'video_cache.db')
         self.work_videocache = os.path.join(self.work_path, 'video_cache.db')
-        self.movie_images = os.path.join(self.cache_path, 'movie\\')
-        self.tv_images = os.path.join(self.cache_path, 'tvshow\\')        
+        self.movie_images = os.path.join(self.cache_path, 'movie')
+        self.tv_images = os.path.join(self.cache_path, 'tvshow')        
         
         self.table_list = ['movie_meta', 'tvshow_meta', 'season_meta', 'episode_meta']
      
@@ -97,6 +97,7 @@ class MetaContainer:
 
     def _del_path(self, path):
 
+        common.addon.log('Attempting to remove folder: %s' % path, 2)
         if xbmcvfs.exists(path):
             try:
                 common.addon.log('Removing folder: %s' % path, 2)
@@ -117,6 +118,8 @@ class MetaContainer:
             except Exception, e:
                 common.addon.log('Failed to delete path: %s' % e, 4)
                 return False
+        else:
+            common.addon.log('Folder does not exist: %s' % path)
 
 
     def _extract_zip(self, src, dest):
