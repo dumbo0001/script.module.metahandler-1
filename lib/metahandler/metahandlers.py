@@ -1386,7 +1386,7 @@ class MetaData:
         meta['tagline'] = md.get('tagline', '')
         meta['rating'] = float(md.get('rating', 0))
         meta['votes'] = str(md.get('votes', ''))
-        meta['duration'] = str(md.get('runtime', 0))
+        meta['duration'] = int(str(md.get('runtime', 0))) * 60
         meta['plot'] = md.get('overview', '')
         meta['mpaa'] = md.get('certification', '')       
         meta['premiered'] = md.get('released', '')
@@ -1552,7 +1552,7 @@ class MetaData:
                 meta['title'] = name
                 if str(show.rating) != '' and show.rating != None:
                     meta['rating'] = float(show.rating)
-                meta['duration'] = show.runtime
+                meta['duration'] = int(show.runtime) * 60
                 meta['plot'] = show.overview
                 meta['mpaa'] = show.content_rating
                 meta['premiered'] = str(show.first_aired)
@@ -1588,7 +1588,7 @@ class MetaData:
                         if imdb_meta.has_key('rating'):
                             meta['rating'] = float(imdb_meta['rating'])
                         if imdb_meta.has_key('runtime'):
-                            meta['duration'] = imdb_meta['runtime']
+                            meta['duration'] = int(imdb_meta['runtime']) * 60
                         if imdb_meta.has_key('cast'):
                             meta['cast'] = imdb_meta['cast']
                         if imdb_meta.has_key('cover_url'):
