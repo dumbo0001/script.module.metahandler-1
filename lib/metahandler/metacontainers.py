@@ -71,7 +71,7 @@ class MetaContainer:
         
         self.table_list = ['movie_meta', 'tvshow_meta', 'season_meta', 'episode_meta']
      
-        common.addon.log('---------------------------------------------------------------------------------------', 2)
+        common.addon.log('---------------------------------------------------------------------------------------', 0)
         #delete and re-create work_path to ensure no previous files are left over
         self._del_path(self.work_path)
         
@@ -97,10 +97,10 @@ class MetaContainer:
 
     def _del_path(self, path):
 
-        common.addon.log('Attempting to remove folder: %s' % path, 2)
+        common.addon.log('Attempting to remove folder: %s' % path, 0)
         if xbmcvfs.exists(path):
             try:
-                common.addon.log('Removing folder: %s' % path, 2)
+                common.addon.log('Removing folder: %s' % path, 0)
                 try:
                     dirs, files = xbmcvfs.listdir(path)
                     for file in files:
@@ -111,7 +111,7 @@ class MetaContainer:
                 except Exception, e:
                     try:
                         common.addon.log('Failed to delete path using xbmcvfs: %s' % e, 4)
-                        common.addon.log('Attempting to remove with shutil: %s' % path, 2)
+                        common.addon.log('Attempting to remove with shutil: %s' % path, 0)
                         shutil.rmtree(path)
                     except:
                         raise
