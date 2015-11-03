@@ -2088,6 +2088,7 @@ class MetaData:
                     common.addon.log('Episode matched row found, deleting table entry', 0)
                     common.addon.log('SQL Delete: %s' % sql_delete, 0)
                     self.dbcur.execute(sql_delete) 
+                    self.dbcon.commit()
         except Exception, e:
             common.addon.log('************* Error attempting to delete from cache table: %s ' % e, 4)
             common.addon.log('Meta data: %' % meta, 4)
